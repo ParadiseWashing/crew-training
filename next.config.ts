@@ -1,3 +1,4 @@
+
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -6,7 +7,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "utfs.io" },
       { protocol: "https", hostname: "uploadthing.com" },
     ],
-  },
+  turbopack: {},
   experimental: {
     serverActions: { allowedOrigins: ["localhost:3000"] },
   },
