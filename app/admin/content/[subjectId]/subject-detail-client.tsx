@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Globe, EyeOff } from "lucide-react";
+import { Plus, Trash2, Globe, EyeOff, Upload, X } from "lucide-react";
+import { uploadFiles } from "@/lib/uploadthing-client";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -231,6 +232,71 @@ export function DeleteTopicButton({ topicId, topicTitle }: DeleteTopicButtonProp
   );
 }
 
+// ─── Cover Image Uploader ─────────────────────────────────────────────────────
+
+function CoverImageUploader({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const [uploading, setUploading] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const res = await uploadFiles("imageUploader", { files: [file] });
+      if (res?.[0]?.ufsUrl) onChange(res[0].ufsUrl);
+    } catch {
+      // fall through silently — user can retry
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-sm font-medium text-gray-700">Cover Image</label>
+      {value ? (
+        <div className="relative rounded-lg overflow-hidden border border-gray-200 h-36">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={value} alt="Cover" className="w-full h-full object-cover" />
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="absolute top-2 right-2 h-7 w-7 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-black/80 transition-colors"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="absolute bottom-2 right-2 text-xs bg-black/60 text-white px-2 py-1 rounded-md hover:bg-black/80 transition-colors"
+          >
+            Change
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="flex items-center justify-center gap-2 h-20 rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50"
+        >
+          <Upload className="h-4 w-4" />
+          {uploading ? "Uploading..." : "Upload cover image"}
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        className="hidden"
+        onChange={handleFile}
+      />
+    </div>
+  );
+}
+
 // ─── Edit Subject Form ────────────────────────────────────────────────────────
 
 interface EditSubjectFormProps {
@@ -319,13 +385,7 @@ export function EditSubjectForm({ subject, allJobRoles }: EditSubjectFormProps) 
         placeholder="Subject overview..."
       />
 
-      <Input
-        label="Cover Image URL"
-        value={coverImage}
-        onChange={(e) => { setCoverImage(e.target.value); markDirty(); }}
-        placeholder="https://..."
-        type="url"
-      />
+      <CoverImageUploader value={coverImage} onChange={(url) => { setCoverImage(url); markDirty(); }} />
 
       <div className="flex flex-col gap-1.5">
         <label className="text-sm font-medium text-gray-700">Category</label>
