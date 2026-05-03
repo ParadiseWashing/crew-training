@@ -1,0 +1,221 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Auth (NextAuth v5) ────────────────────────────────────────────────────────
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ─── Core App Models ──────────────────────────────────────────────────────────
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  systemRole    SystemRole     @default(TRAINEE)
+  jobRoleId     String?
+  jobRole       JobRole?       @relation(fields: [jobRoleId], references: [id])
+  accounts      Account[]
+  sessions      Session[]
+  assignments   Assignment[]
+  quizAttempts  QuizAttempt[]
+  signOffs      SignOff[]
+  stepProgress  StepProgress[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+enum SystemRole {
+  ADMIN
+  TRAINEE
+}
+
+model JobRole {
+  id          String           @id @default(cuid())
+  title       String
+  description String?
+  color       String?          @default("#3B82F6")
+  users       User[]
+  subjects    JobRoleSubject[]
+  createdAt   DateTime         @default(now())
+}
+
+model Subject {
+  id              String           @id @default(cuid())
+  title           String
+  description     String?
+  coverImage      String?
+  category        SubjectCategory  @default(PROCESSES)
+  isPublished     Boolean          @default(false)
+  requiresSignOff Boolean          @default(false)
+  orderIndex      Int              @default(0)
+  topics          Topic[]
+  jobRoles        JobRoleSubject[]
+  assignments     Assignment[]
+  signOffs        SignOff[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+enum SubjectCategory {
+  COMPANY
+  POLICIES
+  PROCESSES
+}
+
+model JobRoleSubject {
+  jobRoleId String
+  subjectId String
+  jobRole   JobRole @relation(fields: [jobRoleId], references: [id], onDelete: Cascade)
+  subject   Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@id([jobRoleId, subjectId])
+}
+
+model Topic {
+  id          String   @id @default(cuid())
+  subjectId   String
+  subject     Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  orderIndex  Int
+  steps       Step[]
+  quiz        Quiz?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Step {
+  id         String         @id @default(cuid())
+  topicId    String
+  topic      Topic          @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  title      String
+  content    Json
+  orderIndex Int
+  progress   StepProgress[]
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+}
+
+model StepProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  stepId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  step        Step     @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
+
+  @@unique([userId, stepId])
+}
+
+model Quiz {
+  id           String        @id @default(cuid())
+  topicId      String        @unique
+  topic        Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  passingScore Int           @default(80)
+  maxAttempts  Int           @default(3)
+  questions    Question[]
+  attempts     QuizAttempt[]
+}
+
+model Question {
+  id            String       @id @default(cuid())
+  quizId        String
+  quiz          Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  text          String
+  type          QuestionType
+  options       Json?
+  correctAnswer Json?
+  orderIndex    Int
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  MULTIPLE_SELECT
+  TRUE_FALSE
+  WRITTEN_RESPONSE
+}
+
+model Assignment {
+  id                 String           @id @default(cuid())
+  userId             String
+  subjectId          String
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject            Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  status             AssignmentStatus @default(NOT_STARTED)
+  progressPercentage Float            @default(0)
+  dueDate            DateTime?
+  assignedAt         DateTime         @default(now())
+  completedAt        DateTime?
+
+  @@unique([userId, subjectId])
+}
+
+enum AssignmentStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+model QuizAttempt {
+  id         String   @id @default(cuid())
+  userId     String
+  quizId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz       Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  score      Float
+  passed     Boolean
+  answers    Json
+  attemptNum Int
+  takenAt    DateTime @default(now())
+}
+
+model SignOff {
+  id         String   @id @default(cuid())
+  userId     String
+  subjectId  String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject    Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  signedName String
+  signedAt   DateTime @default(now())
+}
