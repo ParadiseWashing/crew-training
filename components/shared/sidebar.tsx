@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BookOpen, Users, BarChart3, Settings,
-  GraduationCap, TrendingUp, Building2, Menu, X, LogOut, ChevronRight
+  GraduationCap, TrendingUp, Building2, Menu, X, LogOut, ChevronRight, AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
@@ -21,6 +21,7 @@ const adminNav: NavItem[] = [
   { label: "Content", href: "/admin/content", icon: <BookOpen className="h-5 w-5" /> },
   { label: "People", href: "/admin/people", icon: <Users className="h-5 w-5" /> },
   { label: "Reports", href: "/admin/reports", icon: <BarChart3 className="h-5 w-5" /> },
+  { label: "Audit Flags", href: "/admin/reports/flags", icon: <AlertTriangle className="h-5 w-5" /> },
   { label: "Settings", href: "/admin/settings", icon: <Settings className="h-5 w-5" /> },
 ];
 

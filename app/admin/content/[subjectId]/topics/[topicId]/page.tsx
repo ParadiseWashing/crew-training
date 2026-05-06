@@ -4,10 +4,10 @@ import { notFound } from "next/navigation";
 import { Breadcrumb } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { GripVertical, FileText, HelpCircle, Settings } from "lucide-react";
+import { FileText, HelpCircle, Settings } from "lucide-react";
 import {
   AddStepButton,
-  DeleteStepButton,
+  StepList,
   StepEditor,
   QuizBuilder,
   CreateQuizButton,
@@ -108,25 +108,7 @@ export default async function TopicDetailPage({ params }: PageProps) {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-1">
-              {topic.steps.map((step, idx) => (
-                <Card
-                  key={step.id}
-                  className="group hover:border-blue-200 hover:shadow-sm transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-2 px-3 py-2.5">
-                    <GripVertical className="h-3.5 w-3.5 text-gray-200 flex-shrink-0" />
-                    <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-500 flex-shrink-0">
-                      {idx + 1}
-                    </span>
-                    <p className="text-xs font-medium text-gray-700 flex-1 truncate group-hover:text-blue-600 transition-colors">
-                      {step.title}
-                    </p>
-                    <DeleteStepButton stepId={step.id} stepTitle={step.title} />
-                  </div>
-                </Card>
-              ))}
-            </div>
+            <StepList steps={serializedSteps} />
           )}
         </div>
 

@@ -52,6 +52,9 @@ model User {
   emailVerified DateTime?
   image         String?
   passwordHash  String?
+  inviteToken   String?        @unique
+  inviteStatus  InviteStatus   @default(ACCEPTED)
+  inviteExpires DateTime?
   systemRole    SystemRole     @default(TRAINEE)
   jobRoleId     String?
   jobRole       JobRole?       @relation(fields: [jobRoleId], references: [id])
@@ -61,6 +64,7 @@ model User {
   quizAttempts  QuizAttempt[]
   signOffs      SignOff[]
   stepProgress  StepProgress[]
+  auditFlags    TrainingAuditFlag[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -68,6 +72,11 @@ model User {
 enum SystemRole {
   ADMIN
   TRAINEE
+}
+
+enum InviteStatus {
+  PENDING
+  ACCEPTED
 }
 
 model JobRole {
@@ -138,12 +147,14 @@ model Step {
 }
 
 model StepProgress {
-  id          String   @id @default(cuid())
-  userId      String
-  stepId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  step        Step     @relation(fields: [stepId], references: [id], onDelete: Cascade)
-  completedAt DateTime @default(now())
+  id               String   @id @default(cuid())
+  userId           String
+  stepId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  step             Step     @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  completedAt      DateTime @default(now())
+  timeSpentSeconds Int      @default(0)
+  scrolledToBottom Boolean  @default(false)
 
   @@unique([userId, stepId])
 }
@@ -152,7 +163,7 @@ model Quiz {
   id           String        @id @default(cuid())
   topicId      String        @unique
   topic        Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  passingScore Int           @default(80)
+  passingScore Int           @default(100)
   maxAttempts  Int           @default(3)
   questions    Question[]
   attempts     QuizAttempt[]
@@ -198,16 +209,40 @@ enum AssignmentStatus {
 }
 
 model QuizAttempt {
-  id         String   @id @default(cuid())
-  userId     String
-  quizId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  quiz       Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  score      Float
-  passed     Boolean
-  answers    Json
-  attemptNum Int
-  takenAt    DateTime @default(now())
+  id               String   @id @default(cuid())
+  userId           String
+  quizId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz             Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  score            Float
+  passed           Boolean
+  answers          Json
+  attemptNum       Int
+  timeTakenSeconds Int      @default(0)
+  takenAt          DateTime @default(now())
+}
+
+enum AuditFlagType {
+  SPEED_READ
+  QUIZ_PATTERN
+  QUIZ_SPEED
+  RAPID_MODULE
+}
+
+model TrainingAuditFlag {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flagType    AuditFlagType
+  subjectId   String?
+  topicId     String?
+  stepId      String?
+  quizId      String?
+  details     Json?
+  dismissed   Boolean       @default(false)
+  dismissedBy String?
+  dismissedAt DateTime?
+  createdAt   DateTime      @default(now())
 }
 
 model SignOff {

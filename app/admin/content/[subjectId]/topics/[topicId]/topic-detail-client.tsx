@@ -10,6 +10,21 @@ import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
 import Placeholder from "@tiptap/extension-placeholder";
 import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   Plus,
   Trash2,
   Save,
@@ -27,12 +42,14 @@ import {
   Loader2,
   Video,
   Check,
+  GripVertical,
 } from "lucide-react";
 import { genUploader } from "uploadthing/client";
 import type { OurFileRouter } from "@/lib/uploadthing";
 
 const { uploadFiles } = genUploader<OurFileRouter>();
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input, Textarea } from "@/components/ui/input";
 import {
   Select,
@@ -241,6 +258,166 @@ function EditorToolbar({
         </div>
       )}
     </div>
+  );
+}
+
+// ─── Step List (Sortable) ─────────────────────────────────────────────────────
+
+function SortableStepItem({
+  step,
+  idx,
+  onTitleChange,
+}: {
+  step: StepData;
+  idx: number;
+  onTitleChange: (id: string, title: string) => void;
+}) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: step.id });
+
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(step.title);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  async function save() {
+    const trimmed = draft.trim();
+    if (!trimmed || trimmed === step.title) {
+      setDraft(step.title);
+      setEditing(false);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/steps/${step.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: trimmed }),
+      });
+      if (!res.ok) throw new Error();
+      onTitleChange(step.id, trimmed);
+      router.refresh();
+    } catch {
+      toast("Failed to rename step", "error");
+      setDraft(step.title);
+    }
+    setEditing(false);
+  }
+
+  function cancel() {
+    setDraft(step.title);
+    setEditing(false);
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(isDragging ? "z-50 opacity-60" : "")}
+    >
+      <Card
+        className={cn(
+          "group hover:border-blue-200 hover:shadow-sm transition-all",
+          isDragging && "border-blue-300 shadow-lg",
+          editing && "border-blue-300"
+        )}
+      >
+        <div className="flex items-center gap-2 px-3 py-2.5">
+          <button
+            type="button"
+            className="touch-none cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 flex-shrink-0"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-3.5 w-3.5" />
+          </button>
+          <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-500 flex-shrink-0">
+            {idx + 1}
+          </span>
+          {editing ? (
+            <input
+              ref={inputRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={save}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); inputRef.current?.blur(); }
+                if (e.key === "Escape") { e.preventDefault(); cancel(); }
+              }}
+              className="flex-1 min-w-0 text-xs font-medium bg-transparent border-b border-blue-400 text-gray-900 outline-none"
+            />
+          ) : (
+            <p
+              className="text-xs font-medium text-gray-700 flex-1 truncate group-hover:text-blue-600 transition-colors cursor-text"
+              title="Click to rename"
+              onClick={() => { setDraft(step.title); setEditing(true); }}
+            >
+              {step.title}
+            </p>
+          )}
+          <DeleteStepButton stepId={step.id} stepTitle={step.title} />
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+export function StepList({ steps: initialSteps }: { steps: StepData[] }) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [steps, setSteps] = React.useState(initialSteps);
+
+  // Keep in sync when server refreshes
+  React.useEffect(() => { setSteps(initialSteps); }, [initialSteps]);
+
+  const handleTitleChange = React.useCallback((id: string, title: string) => {
+    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, title } : s)));
+  }, []);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIdx = steps.findIndex((s) => s.id === active.id);
+    const newIdx = steps.findIndex((s) => s.id === over.id);
+    const reordered = arrayMove(steps, oldIdx, newIdx).map((s, i) => ({ ...s, orderIndex: i }));
+
+    setSteps(reordered); // optimistic
+
+    try {
+      const res = await fetch("/api/steps/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(reordered.map(({ id, orderIndex }) => ({ id, orderIndex }))),
+      });
+      if (!res.ok) throw new Error();
+      router.refresh();
+    } catch {
+      toast("Failed to save order", "error");
+      setSteps(initialSteps);
+    }
+  }
+
+  if (steps.length === 0) return null;
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={steps.map((s) => s.id)} strategy={verticalListSortingStrategy}>
+        <div className="space-y-1">
+          {steps.map((step, idx) => (
+            <SortableStepItem key={step.id} step={step} idx={idx} onTitleChange={handleTitleChange} />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }
 

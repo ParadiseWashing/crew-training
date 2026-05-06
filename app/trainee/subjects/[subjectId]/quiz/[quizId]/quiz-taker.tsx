@@ -16,6 +16,7 @@ import {
   Trophy,
   RotateCcw,
   ChevronLeft,
+  RefreshCw,
 } from "lucide-react";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -53,16 +54,44 @@ interface QuizTakerProps {
 
 type AnswerMap = Record<string, string | string[]>;
 
+// ─── Shuffle helpers ────────────────────────────────────────────────────────────
+
+function seededRand(seed: number) {
+  // Simple deterministic PRNG (mulberry32)
+  let s = seed;
+  return () => {
+    s |= 0;
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffleWithSeed<T>(arr: T[], seed: number): T[] {
+  const rand = seededRand(seed);
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
 // ─── Helper ────────────────────────────────────────────────────────────────────
 
 function isAnswered(question: QuizQuestion, answers: AnswerMap): boolean {
-  if (question.type === "WRITTEN_RESPONSE") return true; // Optional
+  if (question.type === "WRITTEN_RESPONSE") return true;
   const val = answers[question.id];
   if (Array.isArray(val)) return val.length > 0;
   return !!val;
 }
 
-function isCorrect(question: QuizQuestion, answer: string | string[] | undefined, correctAnswer: unknown): boolean {
+function isCorrect(
+  question: QuizQuestion,
+  answer: string | string[] | undefined,
+  correctAnswer: unknown
+): boolean {
   if (answer === undefined || answer === null) return false;
   if (question.type === "MULTIPLE_SELECT") {
     const userArr = Array.isArray(answer) ? [...answer].sort() : [answer];
@@ -86,6 +115,7 @@ function QuestionCard({
   onChange,
   showResult,
   correctAnswer,
+  shuffledOptions,
 }: {
   question: QuizQuestion;
   index: number;
@@ -93,8 +123,10 @@ function QuestionCard({
   onChange: (id: string, value: string | string[]) => void;
   showResult: boolean;
   correctAnswer?: unknown;
+  shuffledOptions?: string[];
 }) {
   const correct = showResult ? isCorrect(question, answer, correctAnswer) : null;
+  const options = shuffledOptions ?? question.options;
 
   return (
     <div
@@ -130,7 +162,7 @@ function QuestionCard({
       {/* MULTIPLE_CHOICE */}
       {question.type === "MULTIPLE_CHOICE" && (
         <div className="space-y-2 pl-9">
-          {question.options.map((opt, i) => {
+          {options.map((opt, i) => {
             const selected = answer === opt;
             const isCorrectOpt = showResult && String(correctAnswer) === opt;
             const isWrong = showResult && selected && !isCorrectOpt;
@@ -213,7 +245,7 @@ function QuestionCard({
       {question.type === "MULTIPLE_SELECT" && (
         <div className="space-y-2 pl-9">
           <p className="text-xs text-gray-500 mb-2 -mt-2">Select all that apply</p>
-          {question.options.map((opt, i) => {
+          {options.map((opt, i) => {
             const selectedArr = Array.isArray(answer) ? answer : [];
             const selected = selectedArr.includes(opt);
             const correctArr = Array.isArray(correctAnswer)
@@ -303,8 +335,11 @@ function ResultsView({
   questions,
   answers,
   correctAnswerMap,
+  shuffledQuestions,
+  shuffledOptionsMap,
   onRetake,
   subjectId,
+  moduleReset,
 }: {
   score: number;
   passed: boolean;
@@ -314,11 +349,38 @@ function ResultsView({
   questions: QuizQuestion[];
   answers: AnswerMap;
   correctAnswerMap: Record<string, unknown>;
+  shuffledQuestions: QuizQuestion[];
+  shuffledOptionsMap: Record<string, string[]>;
   onRetake: () => void;
   subjectId: string;
+  moduleReset: boolean;
 }) {
   const attemptsRemaining = maxAttempts - attemptsUsed;
-  const canRetake = attemptsRemaining > 0 && !passed;
+  const canRetake = attemptsRemaining > 0 && !passed && !moduleReset;
+
+  if (moduleReset) {
+    return (
+      <div className="space-y-6">
+        <Card className="border-2 border-red-200 bg-red-50">
+          <CardContent className="pt-8 pb-8 text-center">
+            <RefreshCw className="h-12 w-12 text-red-400 mx-auto mb-3" />
+            <h2 className="text-xl font-bold text-red-800 mb-2">Module Reset</h2>
+            <p className="text-red-700 text-sm mb-4 max-w-sm mx-auto">
+              You&apos;ve used all {maxAttempts} attempts without passing. Your progress on this
+              module has been reset — you&apos;ll need to re-read all steps and retake the quiz.
+            </p>
+            <p className="text-xs text-gray-500">Contact your manager if you have questions.</p>
+          </CardContent>
+        </Card>
+        <Link href={`/trainee/subjects/${subjectId}`}>
+          <Button variant="default" size="md" className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Restart Module
+          </Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -346,9 +408,7 @@ function ResultsView({
           <div
             className={cn(
               "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold mb-3",
-              passed
-                ? "bg-emerald-100 text-emerald-800"
-                : "bg-red-100 text-red-700"
+              passed ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-700"
             )}
           >
             {passed ? (
@@ -361,15 +421,10 @@ function ResultsView({
               </>
             )}
           </div>
-          <p
-            className={cn(
-              "text-sm",
-              passed ? "text-emerald-700" : "text-red-600"
-            )}
-          >
+          <p className={cn("text-sm", passed ? "text-emerald-700" : "text-red-600")}>
             {passed
               ? "Great work! You passed this quiz."
-              : `You need ${passingScore}% to pass.`}
+              : `You need ${passingScore}% to pass.${attemptsRemaining > 0 ? ` ${attemptsRemaining} attempt${attemptsRemaining !== 1 ? "s" : ""} remaining.` : ""}`}
           </p>
           <div className="mt-4">
             <Progress value={score} size="lg" />
@@ -403,7 +458,7 @@ function ResultsView({
       <div>
         <h3 className="text-sm font-semibold text-gray-800 mb-3">Question Breakdown</h3>
         <div className="space-y-3">
-          {questions.map((q, i) => (
+          {shuffledQuestions.map((q, i) => (
             <QuestionCard
               key={q.id}
               question={q}
@@ -412,6 +467,7 @@ function ResultsView({
               onChange={() => {}}
               showResult
               correctAnswer={correctAnswerMap[q.id]}
+              shuffledOptions={shuffledOptionsMap[q.id]}
             />
           ))}
         </div>
@@ -441,13 +497,45 @@ export function QuizTaker({
   const [latestAttempt, setLatestAttempt] = React.useState<QuizAttemptRecord | null>(null);
   const [showResults, setShowResults] = React.useState(false);
   const [allAttempts, setAllAttempts] = React.useState(existingAttempts);
+  const [moduleReset, setModuleReset] = React.useState(false);
+
+  // Timer
+  const startTimeRef = React.useRef<number>(Date.now());
+  React.useEffect(() => {
+    startTimeRef.current = Date.now();
+  }, [showResults]); // reset timer on retake
 
   const attemptsUsed = allAttempts.length;
   const lastAttempt = allAttempts[0] ?? null;
   const alreadyPassed = allAttempts.some((a) => a.passed);
   const outOfAttempts = attemptsUsed >= maxAttempts;
 
-  const requiredQuestions = questions.filter((q) => q.type !== "WRITTEN_RESPONSE");
+  // Shuffle questions and options deterministically based on attempt number
+  const attemptSeed = quizId
+    .split("")
+    .reduce((acc, c) => acc + c.charCodeAt(0), 0) + attemptsUsed * 31337;
+
+  const shuffledQuestions = React.useMemo(
+    () => shuffleWithSeed(questions, attemptSeed),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [attemptsUsed]
+  );
+
+  const shuffledOptionsMap = React.useMemo(() => {
+    const map: Record<string, string[]> = {};
+    shuffledQuestions.forEach((q, qi) => {
+      if (
+        q.type === "MULTIPLE_CHOICE" ||
+        q.type === "MULTIPLE_SELECT"
+      ) {
+        map[q.id] = shuffleWithSeed(q.options, attemptSeed + qi * 7);
+      }
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attemptsUsed]);
+
+  const requiredQuestions = shuffledQuestions.filter((q) => q.type !== "WRITTEN_RESPONSE");
   const allRequired = requiredQuestions.every((q) => isAnswered(q, answers));
 
   const handleChange = (id: string, value: string | string[]) => {
@@ -456,18 +544,27 @@ export function QuizTaker({
 
   const handleSubmit = async () => {
     if (!allRequired) return;
+    const timeTakenSeconds = Math.round((Date.now() - startTimeRef.current) / 1000);
     setSubmitting(true);
     try {
       const res = await fetch(`/api/quizzes/${quizId}/attempt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answers }),
+        body: JSON.stringify({ answers, timeTakenSeconds }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error(err?.error ?? "Failed to submit quiz");
       }
       const data = await res.json();
+
+      if (data.moduleReset) {
+        setModuleReset(true);
+        setShowResults(true);
+        router.refresh();
+        return;
+      }
+
       const newAttempt: QuizAttemptRecord = {
         id: data.id,
         score: data.score,
@@ -491,11 +588,11 @@ export function QuizTaker({
     setAnswers({});
     setShowResults(false);
     setLatestAttempt(null);
+    startTimeRef.current = Date.now();
   };
 
   // ── Guard states ──────────────────────────────────────────────────────────
 
-  // Already passed (from existing attempts, not just submitted)
   if (alreadyPassed && !showResults) {
     const passedAttempt = allAttempts.find((a) => a.passed)!;
     return (
@@ -506,8 +603,8 @@ export function QuizTaker({
             <h2 className="text-xl font-bold text-emerald-800 mb-1">Already Passed!</h2>
             <p className="text-emerald-700 text-sm mb-4">
               You scored{" "}
-              <span className="font-bold">{Math.round(passedAttempt.score)}%</span> on
-              attempt #{passedAttempt.attemptNum}.
+              <span className="font-bold">{Math.round(passedAttempt.score)}%</span> on attempt #
+              {passedAttempt.attemptNum}.
             </p>
             <Progress value={passedAttempt.score} size="lg" className="max-w-xs mx-auto" />
             <p className="text-xs text-gray-500 mt-2">{formatDate(passedAttempt.takenAt)}</p>
@@ -523,7 +620,6 @@ export function QuizTaker({
     );
   }
 
-  // Out of attempts (and not passed)
   if (outOfAttempts && !showResults) {
     return (
       <div className="space-y-6">
@@ -537,8 +633,7 @@ export function QuizTaker({
             {lastAttempt && (
               <div className="inline-flex flex-col items-center">
                 <p className="text-sm text-amber-700 mb-2">
-                  Last score:{" "}
-                  <span className="font-bold">{Math.round(lastAttempt.score)}%</span>
+                  Last score: <span className="font-bold">{Math.round(lastAttempt.score)}%</span>
                 </p>
                 <Progress value={lastAttempt.score} size="lg" className="w-48" />
               </div>
@@ -558,20 +653,22 @@ export function QuizTaker({
     );
   }
 
-  // Show results after submission
-  if (showResults && latestAttempt) {
+  if (showResults && (latestAttempt || moduleReset)) {
     return (
       <ResultsView
-        score={latestAttempt.score}
-        passed={latestAttempt.passed}
+        score={latestAttempt?.score ?? 0}
+        passed={latestAttempt?.passed ?? false}
         passingScore={passingScore}
         attemptsUsed={allAttempts.length}
         maxAttempts={maxAttempts}
         questions={questions}
         answers={answers}
         correctAnswerMap={correctAnswerMap}
+        shuffledQuestions={shuffledQuestions}
+        shuffledOptionsMap={shuffledOptionsMap}
         onRetake={handleRetake}
         subjectId={subjectId}
+        moduleReset={moduleReset}
       />
     );
   }
@@ -594,15 +691,15 @@ export function QuizTaker({
               <p className="text-xs text-gray-500">
                 {attemptsRemaining} attempt{attemptsRemaining !== 1 ? "s" : ""} remaining
               </p>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Passing score: {passingScore}%
-              </p>
+              <p className="text-xs text-gray-500 mt-0.5">Must score: {passingScore}%</p>
             </div>
           </div>
         </CardHeader>
         <CardContent className="pt-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="info">{questions.length} question{questions.length !== 1 ? "s" : ""}</Badge>
+            <Badge variant="info">
+              {shuffledQuestions.length} question{shuffledQuestions.length !== 1 ? "s" : ""}
+            </Badge>
             {attemptsUsed > 0 && (
               <Badge variant="warning">
                 Previous best: {Math.round(Math.max(...allAttempts.map((a) => a.score)))}%
@@ -614,7 +711,7 @@ export function QuizTaker({
 
       {/* Questions */}
       <div className="space-y-4">
-        {questions.map((q, i) => (
+        {shuffledQuestions.map((q, i) => (
           <QuestionCard
             key={q.id}
             question={q}
@@ -622,6 +719,7 @@ export function QuizTaker({
             answer={answers[q.id]}
             onChange={handleChange}
             showResult={false}
+            shuffledOptions={shuffledOptionsMap[q.id]}
           />
         ))}
       </div>

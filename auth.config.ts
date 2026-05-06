@@ -16,10 +16,13 @@ export const authConfig = {
                   const isAuthPage =
                             nextUrl.pathname.startsWith("/login") ||
                             nextUrl.pathname.startsWith("/register");
+                  const isInvitePage = nextUrl.pathname.startsWith("/invite");
                   const isAdminPage = nextUrl.pathname.startsWith("/admin");
                   const isApiAuth = nextUrl.pathname.startsWith("/api/auth");
+                  const isApiInvite = nextUrl.pathname.startsWith("/api/invite");
 
-            if (isApiAuth) return true;
+            if (isApiAuth || isApiInvite) return true;
+                  if (isInvitePage) return true;
                   if (!isLoggedIn && !isAuthPage) return false;
                   if (isLoggedIn && isAuthPage) return Response.redirect(new URL("/trainee/home", nextUrl));
                   if (isAdminPage && auth?.user?.systemRole !== "ADMIN") {

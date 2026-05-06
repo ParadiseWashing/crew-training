@@ -2,17 +2,30 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function POST(_: NextRequest, { params }: { params: Promise<{ stepId: string }> }) {
+// Rough estimate: 200 words/min reading speed
+function estimatedReadingSeconds(content: unknown): number {
+  if (!content || typeof content !== "object") return 0;
+  const text = JSON.stringify(content);
+  // Extract word-like tokens from the JSON text values
+  const words = text.match(/[a-zA-Z]{2,}/g)?.length ?? 0;
+  return Math.max(Math.ceil((words / 200) * 60), 15);
+}
+
+export async function POST(req: NextRequest, { params }: { params: Promise<{ stepId: string }> }) {
+  try {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { stepId } = await params;
+  const body = await req.json().catch(() => ({}));
+  const timeSpentSeconds: number = typeof body.timeSpentSeconds === "number" ? body.timeSpentSeconds : 0;
+  const scrolledToBottom: boolean = body.scrolledToBottom === true;
 
-  // Mark step as complete
+  // Mark step as complete (store time + scroll metadata)
   await prisma.stepProgress.upsert({
     where: { userId_stepId: { userId: session.user.id, stepId } },
-    update: {},
-    create: { userId: session.user.id, stepId },
+    update: { timeSpentSeconds, scrolledToBottom },
+    create: { userId: session.user.id, stepId, timeSpentSeconds, scrolledToBottom },
   });
 
   // Recalculate assignment progress
@@ -23,7 +36,7 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ stepI
         include: {
           subject: {
             include: {
-              topics: { include: { steps: { select: { id: true } } } },
+              topics: { include: { steps: { select: { id: true, content: true } } } },
             },
           },
         },
@@ -50,7 +63,33 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ stepI
         ...(status === "COMPLETED" && { completedAt: new Date() }),
       },
     });
+
+    // ── Audit: SPEED_READ flag ──────────────────────────────────────────────
+    const stepContent = step.content;
+    const expected = estimatedReadingSeconds(stepContent);
+    // Flag if they completed in under 50% of expected reading time (and expected > 20s)
+    if (expected > 20 && timeSpentSeconds < expected * 0.5) {
+      await prisma.trainingAuditFlag.create({
+        data: {
+          userId: session.user.id,
+          flagType: "SPEED_READ",
+          subjectId: subject.id,
+          topicId: step.topicId,
+          stepId,
+          details: {
+            expectedSeconds: expected,
+            actualSeconds: timeSpentSeconds,
+            scrolledToBottom,
+            stepTitle: step.title,
+          },
+        },
+      });
+    }
   }
 
   return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("[progress API error]", err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
+  }
 }

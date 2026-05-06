@@ -16,6 +16,7 @@ import {
   CreateJobRoleButton,
   EditJobRoleButton,
   DeleteJobRoleButton,
+  SendInvitesButton,
 } from "./people-client";
 
 export default async function PeoplePage() {
@@ -44,6 +45,8 @@ export default async function PeoplePage() {
     }),
   ]);
 
+  const pendingInvites = users.filter((u) => u.inviteStatus === "PENDING").length;
+
   return (
     <div>
       <PageHeader
@@ -51,6 +54,7 @@ export default async function PeoplePage() {
         description="Manage your team members and job roles."
         actions={
           <div className="flex items-center gap-2">
+            <SendInvitesButton pendingCount={pendingInvites} />
             <CreateJobRoleButton subjects={subjects} />
             <CreateUserButton jobRoles={jobRoles} />
           </div>
@@ -122,9 +126,16 @@ export default async function PeoplePage() {
                               >
                                 {user.name}
                               </Link>
-                              <span className="text-xs text-gray-400">
-                                {user.systemRole === "ADMIN" ? "Admin" : "Trainee"}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-xs text-gray-400">
+                                  {user.systemRole === "ADMIN" ? "Admin" : "Trainee"}
+                                </span>
+                                {user.inviteStatus === "PENDING" && (
+                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
+                                    Invite Pending
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
 

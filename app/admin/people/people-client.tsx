@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/toast";
-import { Plus, Pencil, Trash2, Briefcase } from "lucide-react";
+import { Plus, Pencil, Trash2, Briefcase, Mail, Copy, Check, Send } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -84,14 +84,20 @@ export function CreateUserButton({ jobRoles }: { jobRoles: JobRoleSummary[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
-          jobRoleId: form.jobRoleId || null,
+          password: form.password || undefined,
+          jobRoleId: form.jobRoleId === "none" ? null : form.jobRoleId || null,
         }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error || "Failed to create user");
       }
-      toast("Employee created successfully", "success");
+      toast(
+        form.password
+          ? "Employee created successfully"
+          : "Employee created — invite pending until release",
+        "success"
+      );
       setOpen(false);
       setForm({ name: "", email: "", password: "", systemRole: "TRAINEE", jobRoleId: "none" });
       router.refresh();
@@ -113,7 +119,10 @@ export function CreateUserButton({ jobRoles }: { jobRoles: JobRoleSummary[] }) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Employee</DialogTitle>
-          <DialogDescription>Create a new account for a team member.</DialogDescription>
+          <DialogDescription>
+            Create a new account. Leave the password blank to send them an invite email instead
+            (they&apos;ll set their own password).
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
@@ -132,14 +141,20 @@ export function CreateUserButton({ jobRoles }: { jobRoles: JobRoleSummary[] }) {
             required
           />
           <Input
-            label="Password"
+            label="Password (optional)"
             type="password"
-            placeholder="Minimum 8 characters"
+            placeholder="Leave blank to send invite"
             value={form.password}
             onChange={(e) => setField("password", e.target.value)}
-            required
-            minLength={8}
+            minLength={form.password ? 8 : undefined}
           />
+          {!form.password && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 text-xs text-blue-700">
+              <span className="font-semibold">Invite mode:</span> An invite link will be generated.
+              The account stays locked until the employee accepts it from the People page after
+              you&apos;ve released the app.
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-gray-700">System Role</label>
             <Select value={form.systemRole} onValueChange={(v) => setField("systemRole", v)}>
@@ -675,6 +690,149 @@ export function DeleteJobRoleButton({ roleId, roleTitle }: { roleId: string; rol
           </DialogClose>
           <Button variant="destructive" onClick={handleDelete} loading={loading}>
             Delete Job Role
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── SendInvitesButton ─────────────────────────────────────────────────────────
+//
+// Lists pending-invite employees and lets the admin either copy each invite
+// link manually or fire the (currently no-op) email sender for the whole batch.
+// Email sending is a stub today — flip EMAIL_ENABLED + wire a provider in
+// lib/email.ts when it's time to release.
+
+interface PendingInvite {
+  id: string;
+  name: string;
+  email: string;
+  inviteUrl: string;
+  inviteExpires: string | null;
+}
+
+export function SendInvitesButton({ pendingCount }: { pendingCount: number }) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [open, setOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [sending, setSending] = React.useState(false);
+  const [invites, setInvites] = React.useState<PendingInvite[]>([]);
+  const [copiedId, setCopiedId] = React.useState<string | null>(null);
+
+  async function loadInvites() {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/invites/pending");
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setInvites(data);
+    } catch {
+      toast("Failed to load pending invites", "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  React.useEffect(() => {
+    if (open) loadInvites();
+  }, [open]);
+
+  async function copyLink(invite: PendingInvite) {
+    try {
+      await navigator.clipboard.writeText(invite.inviteUrl);
+      setCopiedId(invite.id);
+      setTimeout(() => setCopiedId((c) => (c === invite.id ? null : c)), 1500);
+    } catch {
+      toast("Could not copy to clipboard", "error");
+    }
+  }
+
+  async function sendAll() {
+    setSending(true);
+    try {
+      const res = await fetch("/api/invites/send", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to send invites");
+      if (data.emailEnabled) {
+        toast(`Sent ${data.attempted} invite${data.attempted === 1 ? "" : "s"}`, "success");
+      } else {
+        toast(
+          "Email sending is currently disabled. Use the Copy Link buttons to share invites manually.",
+          "warning"
+        );
+      }
+      router.refresh();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Something went wrong", "error");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" disabled={pendingCount === 0}>
+          <Mail className="h-4 w-4" />
+          {pendingCount > 0 ? `Invites (${pendingCount})` : "No Invites"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Pending Invites</DialogTitle>
+          <DialogDescription>
+            Employees waiting to set up their accounts. Send them all an invite email when
+            you&apos;re ready to release the app, or copy individual links to share manually.
+          </DialogDescription>
+        </DialogHeader>
+
+        {loading ? (
+          <p className="text-sm text-gray-500 py-6 text-center">Loading…</p>
+        ) : invites.length === 0 ? (
+          <p className="text-sm text-gray-500 py-6 text-center">No pending invites.</p>
+        ) : (
+          <div className="space-y-2 max-h-80 overflow-y-auto">
+            {invites.map((inv) => (
+              <div
+                key={inv.id}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 hover:border-blue-200 transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-gray-900 truncate">{inv.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{inv.email}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => copyLink(inv)}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-colors flex-shrink-0"
+                  title="Copy invite link"
+                >
+                  {copiedId === inv.id ? (
+                    <>
+                      <Check className="h-3 w-3" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3" />
+                      Copy Link
+                    </>
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="outline">Close</Button>
+          </DialogClose>
+          <Button onClick={sendAll} loading={sending} disabled={invites.length === 0}>
+            <Send className="h-4 w-4" />
+            Send All Invite Emails
           </Button>
         </DialogFooter>
       </DialogContent>
