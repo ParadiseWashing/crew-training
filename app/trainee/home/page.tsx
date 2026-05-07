@@ -59,8 +59,8 @@ export default async function TraineeHomePage() {
 
       {/* Continue Training hero */}
       {continueAssignment && continueAssignment.status !== "COMPLETED" && (
-        <div className="rounded-2xl bg-[#1E2A3A] text-white p-6 sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-widest text-blue-300 mb-2">
+        <div className="rounded-2xl bg-pw-black text-white p-6 sm:p-8">
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted mb-2">
             Continue Training
           </p>
           <h2 className="text-xl font-bold leading-snug mb-1">
@@ -79,7 +79,7 @@ export default async function TraineeHomePage() {
             </div>
             <div className="h-2.5 bg-white/20 rounded-full overflow-hidden">
               <div
-                className="h-full bg-blue-400 rounded-full transition-all duration-500"
+                className="h-full bg-accent rounded-full transition-all duration-500"
                 style={{ width: `${continueAssignment.progressPercentage}%` }}
               />
             </div>
@@ -94,7 +94,7 @@ export default async function TraineeHomePage() {
               <Button
                 variant="default"
                 size="md"
-                className="bg-blue-500 hover:bg-blue-400 text-white gap-1.5"
+                className="bg-accent hover:bg-accent text-white gap-1.5"
               >
                 {continueAssignment.status === "NOT_STARTED" ? "Start" : "Continue"}
                 <ArrowRight className="h-4 w-4" />
@@ -135,7 +135,7 @@ export default async function TraineeHomePage() {
           {assignments.length > 0 && (
             <Link
               href="/trainee/progress"
-              className="text-xs text-blue-500 hover:text-blue-600 font-medium"
+              className="text-xs text-accent hover:text-accent font-medium"
             >
               View progress →
             </Link>

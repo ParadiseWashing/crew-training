@@ -13,7 +13,7 @@ export function SelectTrigger({ className, children, ...props }: React.Component
     <SelectPrimitive.Trigger
       className={cn(
         "flex h-10 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900",
-        "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+        "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent",
         "disabled:bg-gray-50 disabled:cursor-not-allowed",
         className
       )}
@@ -62,7 +62,7 @@ export function SelectItem({ className, children, ...props }: React.ComponentPro
     >
       <span className="absolute left-2 flex h-4 w-4 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
-          <Check className="h-4 w-4 text-blue-500" />
+          <Check className="h-4 w-4 text-accent" />
         </SelectPrimitive.ItemIndicator>
       </span>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>

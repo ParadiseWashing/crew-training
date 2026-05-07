@@ -57,7 +57,7 @@ export function categoryColor(category: string): string {
   const map: Record<string, string> = {
     COMPANY: "bg-purple-100 text-purple-700",
     POLICIES: "bg-amber-100 text-amber-700",
-    PROCESSES: "bg-blue-100 text-blue-700",
+    PROCESSES: "bg-accent-soft text-accent-hover",
   };
   return map[category] ?? "bg-gray-100 text-gray-700";
 }
@@ -65,7 +65,7 @@ export function categoryColor(category: string): string {
 export function statusColor(status: string): string {
   const map: Record<string, string> = {
     NOT_STARTED: "bg-gray-100 text-gray-600",
-    IN_PROGRESS: "bg-blue-100 text-blue-700",
+    IN_PROGRESS: "bg-accent-soft text-accent-hover",
     COMPLETED: "bg-green-100 text-green-700",
   };
   return map[status] ?? "bg-gray-100 text-gray-600";

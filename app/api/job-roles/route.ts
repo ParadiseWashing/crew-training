@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     data: {
       title,
       description,
-      color: color || "#3B82F6",
+      color: color || "#F08A3E",
       subjects: subjectIds?.length
         ? { create: (subjectIds as string[]).map((id: string) => ({ subjectId: id })) }
         : undefined,

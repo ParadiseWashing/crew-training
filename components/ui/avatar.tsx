@@ -16,7 +16,7 @@ const sizeMap = {
 };
 
 const colors = [
-  "bg-blue-500",
+  "bg-accent",
   "bg-purple-500",
   "bg-green-500",
   "bg-amber-500",

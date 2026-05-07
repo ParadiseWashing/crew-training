@@ -280,7 +280,7 @@ function CoverImageUploader({ value, onChange }: { value: string; onChange: (url
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="flex items-center justify-center gap-2 h-20 rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-colors disabled:opacity-50"
+          className="flex items-center justify-center gap-2 h-20 rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500 hover:border-accent hover:text-accent hover:bg-accent-tint transition-colors disabled:opacity-50"
         >
           <Upload className="h-4 w-4" />
           {uploading ? "Uploading..." : "Upload cover image"}
@@ -426,8 +426,8 @@ export function EditSubjectForm({ subject, allJobRoles }: EditSubjectFormProps) 
                   className={cn(
                     "px-3 py-1 rounded-full text-xs font-medium transition-colors border",
                     selected
-                      ? "bg-blue-500 text-white border-blue-500"
-                      : "bg-white text-gray-600 border-gray-300 hover:border-blue-300"
+                      ? "bg-accent text-white border-accent"
+                      : "bg-white text-gray-600 border-gray-300 hover:border-accent-soft"
                   )}
                 >
                   {role.title}

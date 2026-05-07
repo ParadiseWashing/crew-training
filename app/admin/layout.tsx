@@ -9,7 +9,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (session.user.systemRole !== "ADMIN") redirect("/trainee/home");
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA]">
+    <div className="min-h-screen bg-surface">
       <Sidebar user={session.user} />
       <main className="lg:pl-64">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pt-16 lg:pt-6">

@@ -15,7 +15,7 @@ const icons = {
   success: <CheckCircle className="h-5 w-5 text-green-500" />,
   error: <XCircle className="h-5 w-5 text-red-500" />,
   warning: <AlertCircle className="h-5 w-5 text-amber-500" />,
-  info: <AlertCircle className="h-5 w-5 text-blue-500" />,
+  info: <AlertCircle className="h-5 w-5 text-accent" />,
 };
 
 export function Toast({ message, type = "info", onClose }: ToastProps) {

@@ -136,8 +136,8 @@ function SecuritySettings() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
-              <Lock className="h-4 w-4 text-blue-600" />
+            <div className="h-8 w-8 rounded-lg bg-accent-tint flex items-center justify-center">
+              <Lock className="h-4 w-4 text-accent" />
             </div>
             <div>
               <CardTitle>Change Password</CardTitle>
@@ -155,7 +155,7 @@ function SecuritySettings() {
               <div className="relative">
                 <input
                   type={showCurrent ? "text" : "password"}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
                   placeholder="Enter current password"
                   value={form.currentPassword}
                   onChange={(e) => setField("currentPassword", e.target.value)}
@@ -181,7 +181,7 @@ function SecuritySettings() {
               <div className="relative">
                 <input
                   type={showNew ? "text" : "password"}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
                   placeholder="Minimum 8 characters"
                   value={form.newPassword}
                   onChange={(e) => setField("newPassword", e.target.value)}
@@ -208,7 +208,7 @@ function SecuritySettings() {
               <div className="relative">
                 <input
                   type={showConfirm ? "text" : "password"}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 pr-10 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
                   placeholder="Re-enter new password"
                   value={form.confirmPassword}
                   onChange={(e) => setField("confirmPassword", e.target.value)}
@@ -287,8 +287,8 @@ function DangerZone() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
-              <Download className="h-4 w-4 text-blue-600" />
+            <div className="h-8 w-8 rounded-lg bg-accent-tint flex items-center justify-center">
+              <Download className="h-4 w-4 text-accent" />
             </div>
             <div>
               <CardTitle>Export Data</CardTitle>

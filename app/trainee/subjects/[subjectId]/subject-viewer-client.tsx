@@ -325,7 +325,7 @@ function renderMarks(node: TiptapNode): React.ReactNode {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-blue-500 underline hover:text-blue-700"
+          className="text-accent underline hover:text-accent-hover"
         >
           {el}
         </a>
@@ -401,7 +401,7 @@ function renderNode(node: TiptapNode, idx: number): React.ReactNode {
           <span
             className={cn(
               "mt-0.5 flex-shrink-0 h-4 w-4 rounded border flex items-center justify-center",
-              checked ? "bg-blue-500 border-blue-500" : "border-gray-300 bg-white"
+              checked ? "bg-accent border-accent" : "border-gray-300 bg-white"
             )}
           >
             {checked && (
@@ -425,7 +425,7 @@ function renderNode(node: TiptapNode, idx: number): React.ReactNode {
 
     case "blockquote":
       return (
-        <blockquote key={idx} className="border-l-4 border-blue-300 pl-4 italic text-gray-600 my-3">
+        <blockquote key={idx} className="border-l-4 border-accent-soft pl-4 italic text-gray-600 my-3">
           {children}
         </blockquote>
       );
@@ -688,12 +688,12 @@ export function SignOffPanel({
   };
 
   return (
-    <div className="rounded-xl border border-blue-200 bg-blue-50 p-5">
+    <div className="rounded-xl border border-accent-soft bg-accent-tint p-5">
       <div className="flex items-center gap-2 mb-3">
-        <PenLine className="h-5 w-5 text-blue-600" />
-        <span className="font-semibold text-blue-900 text-sm">Sign-Off Required</span>
+        <PenLine className="h-5 w-5 text-accent" />
+        <span className="font-semibold text-accent-hover text-sm">Sign-Off Required</span>
       </div>
-      <p className="text-sm text-blue-700 mb-4">
+      <p className="text-sm text-accent-hover mb-4">
         You&apos;ve completed all content in{" "}
         <span className="font-medium">{subjectTitle}</span>. Please sign off to confirm you have
         read and understood all material.
@@ -704,14 +704,14 @@ export function SignOffPanel({
             type="checkbox"
             checked={acknowledged}
             onChange={(e) => setAcknowledged(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-accent focus:ring-accent"
           />
-          <span className="text-sm text-blue-800">
+          <span className="text-sm text-accent-hover">
             I acknowledge that I have read and understood all content in this subject.
           </span>
         </label>
         <div>
-          <label className="block text-xs font-medium text-blue-800 mb-1">
+          <label className="block text-xs font-medium text-accent-hover mb-1">
             Type your full name to sign
           </label>
           <input
@@ -719,7 +719,7 @@ export function SignOffPanel({
             value={signedName}
             onChange={(e) => setSignedName(e.target.value)}
             placeholder="Full name"
-            className="w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-lg border border-accent-soft bg-white px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </div>
         <Button
@@ -830,7 +830,7 @@ function SidebarContent({
                       className={cn(
                         "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors",
                         isActive
-                          ? "bg-blue-50 text-blue-700 font-medium"
+                          ? "bg-accent-tint text-accent-hover font-medium"
                           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                       )}
                     >
@@ -840,7 +840,7 @@ function SidebarContent({
                         <div
                           className={cn(
                             "h-4 w-4 rounded-full border-2 flex-shrink-0",
-                            isActive ? "border-blue-500" : "border-gray-300"
+                            isActive ? "border-accent" : "border-gray-300"
                           )}
                         />
                       )}
@@ -854,7 +854,7 @@ function SidebarContent({
                   <Link
                     href={`/trainee/subjects/${subjectId}/quiz/${topic.quiz.id}`}
                     onClick={onNavigate}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-blue-600 hover:bg-blue-50 transition-colors"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-accent hover:bg-accent-tint transition-colors"
                   >
                     {topic.quiz.passed ? (
                       <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
@@ -1110,12 +1110,12 @@ export function SubjectViewerClient({
 
                 {/* Topic quiz prompt */}
                 {showTopicQuiz && activeTopic?.quiz && (
-                  <div className="rounded-xl border border-blue-200 bg-blue-50 p-5 mb-6">
+                  <div className="rounded-xl border border-accent-soft bg-accent-tint p-5 mb-6">
                     <div className="flex items-center gap-2 mb-2">
-                      <HelpCircle className="h-5 w-5 text-blue-600" />
-                      <span className="font-semibold text-blue-900 text-sm">Quiz Available</span>
+                      <HelpCircle className="h-5 w-5 text-accent" />
+                      <span className="font-semibold text-accent-hover text-sm">Quiz Available</span>
                     </div>
-                    <p className="text-sm text-blue-700 mb-3">
+                    <p className="text-sm text-accent-hover mb-3">
                       You&apos;ve completed all steps in{" "}
                       <span className="font-medium">{activeTopic.title}</span>. Take the quiz to
                       test your understanding.
@@ -1126,7 +1126,7 @@ export function SubjectViewerClient({
                           Take Quiz →
                         </Button>
                       </Link>
-                      <span className="text-xs text-blue-600">
+                      <span className="text-xs text-accent">
                         Must score 100% &middot;{" "}
                         {activeTopic.quiz.maxAttempts - activeTopic.quiz.attemptCount} attempt
                         {activeTopic.quiz.maxAttempts - activeTopic.quiz.attemptCount !== 1

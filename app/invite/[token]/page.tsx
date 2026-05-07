@@ -103,21 +103,21 @@ export default function InvitePage() {
   // ── Validation states ─────────────────────────────────────────────────────
   if (validating) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-sm text-gray-500">Loading invite…</div>
+      <div className="min-h-screen flex items-center justify-center bg-surface">
+        <div className="text-sm text-muted">Loading invite…</div>
       </div>
     );
   }
 
   if (validationError) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6">
+      <div className="min-h-screen flex items-center justify-center bg-surface px-6">
         <div className="w-full max-w-sm text-center">
           <div className="h-14 w-14 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="h-7 w-7 text-red-500" />
+            <AlertCircle className="h-7 w-7 text-destructive" />
           </div>
-          <h1 className="text-xl font-bold text-gray-900 mb-2">Invite unavailable</h1>
-          <p className="text-sm text-gray-500 mb-6">{validationError}</p>
+          <h1 className="text-xl font-bold text-n-900 mb-2">Invite unavailable</h1>
+          <p className="text-sm text-muted mb-6">{validationError}</p>
           <Button variant="outline" onClick={() => router.push("/login")} className="w-full">
             Go to Sign In
           </Button>
@@ -128,17 +128,22 @@ export default function InvitePage() {
 
   // ── Set password form ─────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-surface">
       {/* Left panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[#1E2A3A] flex-col justify-center px-16">
-        <div className="max-w-md">
+      <div className="hidden lg:flex lg:w-1/2 bg-pw-black flex-col justify-center px-16 relative overflow-hidden">
+        {/* Subtle orange glow accent */}
+        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-accent/15 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-40 -right-20 w-96 h-96 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
+
+        <div className="max-w-md relative">
           <div className="flex items-center gap-3 mb-8">
-            <div className="h-12 w-12 rounded-xl bg-blue-500 flex items-center justify-center">
+            <div className="h-12 w-12 rounded-xl bg-accent flex items-center justify-center shadow-lg shadow-accent/30">
               <GraduationCap className="h-7 w-7 text-white" />
             </div>
-            <div>
-              <h1 className="text-white text-2xl font-bold">Crew Training</h1>
-              <p className="text-white/50 text-sm">Professional Cleaning</p>
+            <div className="leading-tight">
+              <p className="pa-wordmark text-3xl">Paradise</p>
+              <h1 className="text-white text-xl font-bold -mt-1">Crew Training</h1>
+              <p className="text-white/50 text-xs">Professional Cleaning</p>
             </div>
           </div>
           <h2 className="text-white text-4xl font-bold leading-tight mb-4">
@@ -148,35 +153,38 @@ export default function InvitePage() {
             Set your password to access your training portal and start learning.
           </p>
           <div className="mt-10 flex items-center gap-3 text-white/70 text-sm">
-            <CheckCircle2 className="h-5 w-5 text-emerald-400" />
+            <CheckCircle2 className="h-5 w-5 text-success" />
             <span>Account verified</span>
           </div>
         </div>
       </div>
 
       {/* Right panel */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-white">
+      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-card">
         <div className="w-full max-w-sm">
           <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="h-10 w-10 rounded-xl bg-blue-500 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-xl bg-accent flex items-center justify-center shadow-sm">
               <GraduationCap className="h-6 w-6 text-white" />
             </div>
-            <span className="text-gray-900 text-xl font-bold">Crew Training</span>
+            <div className="leading-tight">
+              <p className="pa-wordmark text-2xl">Paradise</p>
+              <span className="text-n-900 text-base font-bold">Crew Training</span>
+            </div>
           </div>
 
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">Set your password</h2>
-          <p className="text-gray-500 text-sm mb-2">
-            Hi <span className="font-medium text-gray-700">{invite?.name}</span> — you're almost in.
+          <h2 className="text-2xl font-bold text-n-900 mb-1">Set your password</h2>
+          <p className="text-muted text-sm mb-2">
+            Hi <span className="font-medium text-n-700">{invite?.name}</span> — you're almost in.
           </p>
-          <p className="text-gray-400 text-xs mb-8">
+          <p className="text-muted-foreground text-xs mb-8">
             Signing in as <span className="font-mono">{invite?.email}</span>
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">New Password</label>
+              <label className="text-sm font-medium text-n-700">New Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
@@ -184,12 +192,12 @@ export default function InvitePage() {
                   placeholder="At least 8 characters"
                   required
                   minLength={8}
-                  className="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-10 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full rounded-lg border border-border-strong bg-card pl-10 pr-10 py-2 text-sm text-n-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-n-700"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -197,9 +205,9 @@ export default function InvitePage() {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-gray-700">Confirm Password</label>
+              <label className="text-sm font-medium text-n-700">Confirm Password</label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   type={showPassword ? "text" : "password"}
                   value={confirm}
@@ -207,13 +215,13 @@ export default function InvitePage() {
                   placeholder="Re-enter password"
                   required
                   minLength={8}
-                  className="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full rounded-lg border border-border-strong bg-card pl-10 pr-3 py-2 text-sm text-n-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
                 />
               </div>
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-600">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-destructive">
                 {error}
               </div>
             )}

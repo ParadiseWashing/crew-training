@@ -71,7 +71,7 @@ export function DirectoryClient({ users, currentUserId }: DirectoryClientProps) 
             placeholder="Search by name or role…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-accent"
           />
         </div>
       </div>
@@ -97,7 +97,7 @@ export function DirectoryClient({ users, currentUserId }: DirectoryClientProps) 
               className={cn(
                 "rounded-full px-3 py-1 text-xs font-medium transition-colors border",
                 selectedRole === role.id
-                  ? "bg-blue-500 text-white border-blue-500"
+                  ? "bg-accent text-white border-accent"
                   : "bg-white text-gray-600 border-gray-200 hover:border-gray-300 hover:bg-gray-50"
               )}
               style={
@@ -130,7 +130,7 @@ export function DirectoryClient({ users, currentUserId }: DirectoryClientProps) 
           {(search || selectedRole) && (
             <button
               onClick={() => { setSearch(""); setSelectedRole(null); }}
-              className="mt-3 text-sm text-blue-500 hover:text-blue-600 font-medium"
+              className="mt-3 text-sm text-accent hover:text-accent font-medium"
             >
               Clear filters
             </button>
@@ -145,7 +145,7 @@ export function DirectoryClient({ users, currentUserId }: DirectoryClientProps) 
                 key={user.id}
                 className={cn(
                   "bg-white rounded-xl border p-5 flex items-start gap-4 hover:shadow-md transition-shadow",
-                  isCurrentUser ? "border-blue-200 ring-1 ring-blue-200" : "border-gray-200"
+                  isCurrentUser ? "border-accent-soft ring-1 ring-accent-soft" : "border-gray-200"
                 )}
               >
                 <Avatar name={user.name} image={user.image} size="lg" />
@@ -156,7 +156,7 @@ export function DirectoryClient({ users, currentUserId }: DirectoryClientProps) 
                       {user.name}
                     </p>
                     {isCurrentUser && (
-                      <span className="text-xs text-blue-500 font-medium">(you)</span>
+                      <span className="text-xs text-accent font-medium">(you)</span>
                     )}
                   </div>
 
@@ -183,7 +183,7 @@ export function DirectoryClient({ users, currentUserId }: DirectoryClientProps) 
                   {user.email && (
                     <a
                       href={`mailto:${user.email}`}
-                      className="block text-xs text-gray-400 hover:text-blue-500 transition-colors mt-1.5 truncate"
+                      className="block text-xs text-gray-400 hover:text-accent transition-colors mt-1.5 truncate"
                       title={user.email}
                     >
                       {user.email}

@@ -126,8 +126,8 @@ export default async function ProgressPage() {
         <Card>
           <CardContent className="pt-5 pb-5">
             <div className="flex items-center gap-3">
-              <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-blue-100 flex items-center justify-center">
-                <ClipboardList className="h-5 w-5 text-blue-600" />
+              <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-accent-soft flex items-center justify-center">
+                <ClipboardList className="h-5 w-5 text-accent" />
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">{totalAssigned}</p>
@@ -233,7 +233,7 @@ export default async function ProgressPage() {
                         </div>
                         <Link
                           href={`/trainee/subjects/${assignment.subjectId}`}
-                          className="font-semibold text-gray-900 hover:text-blue-600 transition-colors text-sm"
+                          className="font-semibold text-gray-900 hover:text-accent transition-colors text-sm"
                         >
                           {assignment.subject.title}
                         </Link>
@@ -327,7 +327,7 @@ export default async function ProgressPage() {
                       <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">
                         <Link
                           href={`/trainee/subjects/${attempt.quiz.topic.subject.id}`}
-                          className="hover:text-blue-600 transition-colors truncate max-w-[160px] block"
+                          className="hover:text-accent transition-colors truncate max-w-[160px] block"
                         >
                           {attempt.quiz.topic.subject.title}
                         </Link>
@@ -417,7 +417,7 @@ export default async function ProgressPage() {
               Your training progress will appear here as you complete steps and quizzes.
             </p>
             <Link href="/trainee/home" className="mt-4">
-              <span className="text-sm text-blue-500 hover:text-blue-600 font-medium">
+              <span className="text-sm text-accent hover:text-accent font-medium">
                 Go to Training →
               </span>
             </Link>

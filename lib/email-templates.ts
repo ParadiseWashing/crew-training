@@ -44,9 +44,9 @@ If you didn't expect this email, you can safely ignore it.
       <td align="center">
         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width:560px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
           <tr>
-            <td style="padding:40px 40px 20px 40px;text-align:center;background-color:#1e40af;color:#ffffff;">
+            <td style="padding:40px 40px 20px 40px;text-align:center;background-color:#0E0E0E;color:#ffffff;border-bottom:4px solid #F08A3E;">
               <h1 style="margin:0;font-size:24px;font-weight:700;letter-spacing:-0.02em;">${company}</h1>
-              <p style="margin:8px 0 0 0;font-size:14px;opacity:0.9;">Crew Training Portal</p>
+              <p style="margin:8px 0 0 0;font-size:14px;color:#F08A3E;">Crew Training Portal</p>
             </td>
           </tr>
           <tr>
@@ -56,14 +56,14 @@ If you didn't expect this email, you can safely ignore it.
                 Your training account has been created. Click the button below to set your password and get started.
               </p>
               <p style="margin:24px 0;text-align:center;">
-                <a href="${data.inviteUrl}" style="display:inline-block;background-color:#2563eb;color:#ffffff;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;">
+                <a href="${data.inviteUrl}" style="display:inline-block;background-color:#F08A3E;color:#ffffff;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;">
                   Set Up Your Account
                 </a>
               </p>
               <p style="margin:0 0 8px 0;font-size:13px;color:#6b7280;">
                 Or copy and paste this link into your browser:
               </p>
-              <p style="margin:0 0 24px 0;font-size:13px;color:#2563eb;word-break:break-all;">
+              <p style="margin:0 0 24px 0;font-size:13px;color:#D9701F;word-break:break-all;">
                 ${data.inviteUrl}
               </p>
               <p style="margin:24px 0 0 0;padding-top:20px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;line-height:1.5;">

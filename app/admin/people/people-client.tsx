@@ -149,7 +149,7 @@ export function CreateUserButton({ jobRoles }: { jobRoles: JobRoleSummary[] }) {
             minLength={form.password ? 8 : undefined}
           />
           {!form.password && (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5 text-xs text-blue-700">
+            <div className="rounded-lg border border-accent-soft bg-accent-tint px-3 py-2.5 text-xs text-accent-hover">
               <span className="font-semibold">Invite mode:</span> An invite link will be generated.
               The account stays locked until the employee accepts it from the People page after
               you&apos;ve released the app.
@@ -250,7 +250,7 @@ export function EditUserButton({ user, jobRoles }: { user: UserData; jobRoles: J
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button
-          className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+          className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-accent hover:bg-accent-tint transition-colors"
           title="Edit employee"
         >
           <Pencil className="h-3.5 w-3.5" />
@@ -386,7 +386,7 @@ export function CreateJobRoleButton({ subjects }: { subjects: SubjectSummary[] }
   const [loading, setLoading] = React.useState(false);
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const [color, setColor] = React.useState("#3B82F6");
+  const [color, setColor] = React.useState("#F08A3E");
   const [selectedSubjects, setSelectedSubjects] = React.useState<string[]>([]);
 
   function toggleSubject(id: string) {
@@ -413,7 +413,7 @@ export function CreateJobRoleButton({ subjects }: { subjects: SubjectSummary[] }
       setOpen(false);
       setTitle("");
       setDescription("");
-      setColor("#3B82F6");
+      setColor("#F08A3E");
       setSelectedSubjects([]);
       router.refresh();
     } catch (err) {
@@ -465,7 +465,7 @@ export function CreateJobRoleButton({ subjects }: { subjects: SubjectSummary[] }
               <Input
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
-                placeholder="#3B82F6"
+                placeholder="#F08A3E"
                 className="font-mono text-sm"
               />
             </div>
@@ -520,7 +520,7 @@ export function EditJobRoleButton({
 
   const [title, setTitle] = React.useState(role.title);
   const [description, setDescription] = React.useState(role.description ?? "");
-  const [color, setColor] = React.useState(role.color ?? "#3B82F6");
+  const [color, setColor] = React.useState(role.color ?? "#F08A3E");
   const [selectedSubjects, setSelectedSubjects] = React.useState<string[]>(
     role.subjects.map((s) => s.subject.id)
   );
@@ -530,7 +530,7 @@ export function EditJobRoleButton({
     if (open) {
       setTitle(role.title);
       setDescription(role.description ?? "");
-      setColor(role.color ?? "#3B82F6");
+      setColor(role.color ?? "#F08A3E");
       setSelectedSubjects(role.subjects.map((s) => s.subject.id));
     }
   }, [open, role]);
@@ -568,7 +568,7 @@ export function EditJobRoleButton({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <button
-          className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+          className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-accent hover:bg-accent-tint transition-colors"
           title="Edit job role"
         >
           <Pencil className="h-3.5 w-3.5" />
@@ -604,7 +604,7 @@ export function EditJobRoleButton({
               <Input
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
-                placeholder="#3B82F6"
+                placeholder="#F08A3E"
                 className="font-mono text-sm"
               />
             </div>
@@ -797,7 +797,7 @@ export function SendInvitesButton({ pendingCount }: { pendingCount: number }) {
             {invites.map((inv) => (
               <div
                 key={inv.id}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 hover:border-blue-200 transition-colors"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-gray-200 hover:border-accent-soft transition-colors"
               >
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-gray-900 truncate">{inv.name}</p>
@@ -806,7 +806,7 @@ export function SendInvitesButton({ pendingCount }: { pendingCount: number }) {
                 <button
                   type="button"
                   onClick={() => copyLink(inv)}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600 transition-colors flex-shrink-0"
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-gray-200 text-gray-600 hover:border-accent-soft hover:text-accent transition-colors flex-shrink-0"
                   title="Copy invite link"
                 >
                   {copiedId === inv.id ? (

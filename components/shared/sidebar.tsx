@@ -44,14 +44,15 @@ export function Sidebar({ user }: SidebarProps) {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="px-6 py-5 border-b border-white/10">
+      <div className="px-5 py-5 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-lg bg-blue-500 flex items-center justify-center">
+          <div className="h-10 w-10 rounded-xl bg-accent flex items-center justify-center shadow-sm flex-shrink-0">
             <GraduationCap className="h-5 w-5 text-white" />
           </div>
-          <div>
-            <p className="text-white font-bold text-sm leading-tight">Crew Training</p>
-            <p className="text-white/50 text-xs">
+          <div className="leading-tight">
+            <p className="pa-wordmark text-2xl">Paradise</p>
+            <p className="text-sm font-semibold text-sidebar-foreground -mt-0.5">Crew Training</p>
+            <p className="text-xs text-muted">
               {isAdmin ? "Admin Portal" : "Training Portal"}
             </p>
           </div>
@@ -59,7 +60,7 @@ export function Sidebar({ user }: SidebarProps) {
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
           return (
@@ -68,12 +69,15 @@ export function Sidebar({ user }: SidebarProps) {
               href={item.href}
               onClick={() => setMobileOpen(false)}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative",
                 isActive
-                  ? "bg-white/15 text-white"
-                  : "text-white/70 hover:bg-white/10 hover:text-white"
+                  ? "bg-accent-tint text-accent-hover"
+                  : "text-sidebar-foreground/80 hover:bg-n-50 hover:text-sidebar-foreground"
               )}
             >
+              {isActive && (
+                <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-accent" />
+              )}
               {item.icon}
               {item.label}
               {isActive && <ChevronRight className="h-4 w-4 ml-auto" />}
@@ -83,16 +87,16 @@ export function Sidebar({ user }: SidebarProps) {
       </nav>
 
       {/* User */}
-      <div className="px-3 py-4 border-t border-white/10">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-lg">
+      <div className="px-3 py-3 border-t border-sidebar-border">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-lg">
           <Avatar name={user.name} image={user.image} size="sm" />
           <div className="flex-1 min-w-0">
-            <p className="text-white text-sm font-medium truncate">{user.name}</p>
-            <p className="text-white/50 text-xs truncate">{user.email}</p>
+            <p className="text-sidebar-foreground text-sm font-medium truncate">{user.name}</p>
+            <p className="text-muted text-xs truncate">{user.email}</p>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="text-white/50 hover:text-white transition-colors p-1 rounded"
+            className="text-muted-foreground hover:text-sidebar-foreground transition-colors p-1.5 rounded-md hover:bg-n-50"
             title="Sign out"
           >
             <LogOut className="h-4 w-4" />
@@ -107,7 +111,7 @@ export function Sidebar({ user }: SidebarProps) {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed top-4 left-4 z-40 lg:hidden bg-[#1E2A3A] text-white p-2 rounded-lg shadow-lg"
+        className="fixed top-4 left-4 z-40 lg:hidden bg-card text-sidebar-foreground border border-sidebar-border p-2 rounded-lg shadow-sm"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -115,7 +119,7 @@ export function Sidebar({ user }: SidebarProps) {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -123,13 +127,13 @@ export function Sidebar({ user }: SidebarProps) {
       {/* Mobile drawer */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-[#1E2A3A] transform transition-transform lg:hidden",
+          "fixed inset-y-0 left-0 z-50 w-72 bg-sidebar border-r border-sidebar-border shadow-xl transform transition-transform lg:hidden",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <button
           onClick={() => setMobileOpen(false)}
-          className="absolute right-4 top-4 text-white/60 hover:text-white"
+          className="absolute right-3 top-4 text-muted-foreground hover:text-sidebar-foreground p-1 rounded-md hover:bg-n-50"
         >
           <X className="h-5 w-5" />
         </button>
@@ -137,7 +141,7 @@ export function Sidebar({ user }: SidebarProps) {
       </div>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-[#1E2A3A] flex-col z-30">
+      <div className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-sidebar-border flex-col z-30">
         <SidebarContent />
       </div>
     </>

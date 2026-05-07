@@ -123,7 +123,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
                     <div className="flex-1 min-w-0">
                       <Link
                         href={`/admin/content/${subject.id}/topics/${topic.id}`}
-                        className="font-medium text-gray-900 group-hover:text-blue-600 transition-colors text-sm"
+                        className="font-medium text-gray-900 group-hover:text-accent transition-colors text-sm"
                       >
                         {topic.title}
                       </Link>
@@ -133,7 +133,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
                           {topic.steps.length} {topic.steps.length === 1 ? "step" : "steps"}
                         </span>
                         {topic.quiz && (
-                          <span className="text-xs text-blue-500 flex items-center gap-1">
+                          <span className="text-xs text-accent flex items-center gap-1">
                             <HelpCircle className="h-3 w-3" />
                             Quiz ({topic.quiz.passingScore}% passing)
                           </span>
@@ -145,7 +145,7 @@ export default async function SubjectDetailPage({ params }: PageProps) {
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <DeleteTopicButton topicId={topic.id} topicTitle={topic.title} />
                       <Link href={`/admin/content/${subject.id}/topics/${topic.id}`}>
-                        <Button variant="ghost" size="icon" className="text-gray-400 hover:text-blue-500">
+                        <Button variant="ghost" size="icon" className="text-gray-400 hover:text-accent">
                           <ChevronRight className="h-4 w-4" />
                         </Button>
                       </Link>

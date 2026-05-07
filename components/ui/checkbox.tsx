@@ -15,8 +15,8 @@ export function Checkbox({ className, label, id, ...props }: CheckboxProps) {
         id={id}
         className={cn(
           "h-4 w-4 rounded border border-gray-300 transition-colors flex-shrink-0",
-          "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1",
-          "data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500",
+          "focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1",
+          "data-[state=checked]:bg-accent data-[state=checked]:border-accent",
           "disabled:opacity-50 disabled:cursor-not-allowed",
           className
         )}

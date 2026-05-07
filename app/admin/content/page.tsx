@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 const categoryGradients: Record<string, string> = {
   COMPANY: "from-purple-500 to-indigo-600",
   POLICIES: "from-amber-400 to-orange-500",
-  PROCESSES: "from-blue-500 to-cyan-600",
+  PROCESSES: "from-accent to-accent-hover",
 };
 
 export default async function ContentPage() {
@@ -91,7 +91,7 @@ export default async function ContentPage() {
 
               {/* Content */}
               <CardContent className="pt-4 flex-1">
-                <h3 className="font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-blue-600 transition-colors">
+                <h3 className="font-semibold text-gray-900 leading-snug line-clamp-2 group-hover:text-accent transition-colors">
                   {subject.title}
                 </h3>
                 {subject.description && (
@@ -137,8 +137,8 @@ export default async function ContentPage() {
       {/* Stats bar */}
       <div className="flex items-center gap-6 mb-6 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
-            <BookOpen className="h-4 w-4 text-blue-500" />
+          <div className="h-8 w-8 rounded-lg bg-accent-tint flex items-center justify-center">
+            <BookOpen className="h-4 w-4 text-accent" />
           </div>
           <div>
             <p className="text-xs text-gray-500">Total Subjects</p>

@@ -87,7 +87,7 @@ export default async function AdminDashboard() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Team Progress</CardTitle>
-                <Link href="/admin/people" className="text-sm text-blue-500 hover:text-blue-600 font-medium">
+                <Link href="/admin/people" className="text-sm text-accent hover:text-accent font-medium">
                   View all →
                 </Link>
               </div>
@@ -109,7 +109,7 @@ export default async function AdminDashboard() {
                       <Avatar name={user.name} image={user.image} size="sm" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 truncate">
+                          <p className="text-sm font-medium text-gray-900 group-hover:text-accent truncate">
                             {user.name}
                           </p>
                           {user.jobRole && (
@@ -127,7 +127,7 @@ export default async function AdminDashboard() {
                 {users.length === 0 && (
                   <div className="text-center py-8 text-gray-400">
                     <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No trainees yet. <Link href="/admin/people" className="text-blue-500">Add crew members</Link></p>
+                    <p className="text-sm">No trainees yet. <Link href="/admin/people" className="text-accent">Add crew members</Link></p>
                   </div>
                 )}
               </div>
@@ -171,7 +171,7 @@ export default async function AdminDashboard() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Content</CardTitle>
-                <Link href="/admin/content" className="text-sm text-blue-500 hover:text-blue-600 font-medium">
+                <Link href="/admin/content" className="text-sm text-accent hover:text-accent font-medium">
                   Manage →
                 </Link>
               </div>
@@ -187,7 +187,7 @@ export default async function AdminDashboard() {
                 ))}
                 {subjects.length === 0 && (
                   <p className="text-xs text-gray-400 text-center py-4">
-                    No subjects. <Link href="/admin/content" className="text-blue-500">Create one</Link>
+                    No subjects. <Link href="/admin/content" className="text-accent">Create one</Link>
                   </p>
                 )}
               </div>

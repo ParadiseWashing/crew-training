@@ -178,7 +178,7 @@ function QuestionCard({
                       ? "border-red-400 bg-red-50"
                       : "border-gray-200 bg-white"
                     : selected
-                    ? "border-blue-400 bg-blue-50"
+                    ? "border-accent bg-accent-tint"
                     : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                 )}
               >
@@ -189,7 +189,7 @@ function QuestionCard({
                   checked={selected}
                   onChange={() => !showResult && onChange(question.id, opt)}
                   disabled={showResult}
-                  className="accent-blue-500"
+                  className="accent-pw-orange"
                 />
                 <span className="text-sm text-gray-700">{opt}</span>
                 {showResult && isCorrectOpt && (
@@ -221,7 +221,7 @@ function QuestionCard({
                       ? "border-red-400 bg-red-50"
                       : "border-gray-200 bg-white"
                     : selected
-                    ? "border-blue-400 bg-blue-50"
+                    ? "border-accent bg-accent-tint"
                     : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                 )}
               >
@@ -232,7 +232,7 @@ function QuestionCard({
                   checked={selected}
                   onChange={() => !showResult && onChange(question.id, opt)}
                   disabled={showResult}
-                  className="accent-blue-500"
+                  className="accent-pw-orange"
                 />
                 <span className="text-sm font-medium text-gray-700">{opt}</span>
               </label>
@@ -268,7 +268,7 @@ function QuestionCard({
                       ? "border-amber-400 bg-amber-50"
                       : "border-gray-200 bg-white"
                     : selected
-                    ? "border-blue-400 bg-blue-50"
+                    ? "border-accent bg-accent-tint"
                     : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
                 )}
               >
@@ -285,7 +285,7 @@ function QuestionCard({
                     onChange(question.id, next);
                   }}
                   disabled={showResult}
-                  className="accent-blue-500"
+                  className="accent-pw-orange"
                 />
                 <span className="text-sm text-gray-700">{opt}</span>
                 {showResult && isCorrectOpt && (
@@ -308,7 +308,7 @@ function QuestionCard({
             placeholder="Type your response here…"
             className={cn(
               "w-full rounded-lg border px-3 py-2 text-sm text-gray-700 resize-none",
-              "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500",
+              "placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-accent",
               "disabled:bg-gray-50 disabled:cursor-default",
               "border-gray-200"
             )}

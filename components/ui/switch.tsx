@@ -13,8 +13,8 @@ export function Switch({ className, label, description, ...props }: SwitchProps)
     <div className="flex items-center gap-3">
       <SwitchPrimitive.Root
         className={cn(
-          "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
-          "bg-gray-200 data-[state=checked]:bg-blue-500",
+          "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2",
+          "bg-gray-200 data-[state=checked]:bg-accent",
           "disabled:opacity-50 disabled:cursor-not-allowed",
           className
         )}

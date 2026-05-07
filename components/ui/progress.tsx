@@ -18,7 +18,7 @@ export function Progress({ value, className, barClassName, showLabel, size = "md
     clamped === 100
       ? "bg-green-500"
       : clamped > 50
-      ? "bg-blue-500"
+      ? "bg-accent"
       : clamped > 0
       ? "bg-amber-500"
       : "bg-gray-200";

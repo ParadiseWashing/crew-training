@@ -190,7 +190,7 @@ function EditorToolbar({
           className={cn(
             "p-1.5 rounded transition-colors",
             tool.active
-              ? "bg-blue-100 text-blue-700"
+              ? "bg-accent-soft text-accent-hover"
               : "text-gray-500 hover:bg-gray-200 hover:text-gray-900"
           )}
         >
@@ -221,7 +221,7 @@ function EditorToolbar({
         className={cn(
           "p-1.5 rounded transition-colors",
           youtubeInput
-            ? "bg-blue-100 text-blue-700"
+            ? "bg-accent-soft text-accent-hover"
             : "text-gray-500 hover:bg-gray-200 hover:text-gray-900"
         )}
       >
@@ -239,12 +239,12 @@ function EditorToolbar({
               if (e.key === "Enter") { e.preventDefault(); submitYoutube(); }
               if (e.key === "Escape") { setYoutubeInput(false); setYoutubeUrl(""); }
             }}
-            className="h-6 w-52 rounded border border-gray-300 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500"
+            className="h-6 w-52 rounded border border-gray-300 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-accent"
           />
           <button
             type="button"
             onClick={submitYoutube}
-            className="p-1 rounded text-blue-600 hover:bg-blue-50 transition-colors"
+            className="p-1 rounded text-accent hover:bg-accent-tint transition-colors"
           >
             <Check className="h-3.5 w-3.5" />
           </button>
@@ -321,9 +321,9 @@ function SortableStepItem({
     >
       <Card
         className={cn(
-          "group hover:border-blue-200 hover:shadow-sm transition-all",
-          isDragging && "border-blue-300 shadow-lg",
-          editing && "border-blue-300"
+          "group hover:border-accent-soft hover:shadow-sm transition-all",
+          isDragging && "border-accent-soft shadow-lg",
+          editing && "border-accent-soft"
         )}
       >
         <div className="flex items-center gap-2 px-3 py-2.5">
@@ -348,11 +348,11 @@ function SortableStepItem({
                 if (e.key === "Enter") { e.preventDefault(); inputRef.current?.blur(); }
                 if (e.key === "Escape") { e.preventDefault(); cancel(); }
               }}
-              className="flex-1 min-w-0 text-xs font-medium bg-transparent border-b border-blue-400 text-gray-900 outline-none"
+              className="flex-1 min-w-0 text-xs font-medium bg-transparent border-b border-accent text-gray-900 outline-none"
             />
           ) : (
             <p
-              className="text-xs font-medium text-gray-700 flex-1 truncate group-hover:text-blue-600 transition-colors cursor-text"
+              className="text-xs font-medium text-gray-700 flex-1 truncate group-hover:text-accent transition-colors cursor-text"
               title="Click to rename"
               onClick={() => { setDraft(step.title); setEditing(true); }}
             >
@@ -523,8 +523,8 @@ export function StepEditor({ steps }: StepEditorProps) {
               className={cn(
                 "px-2.5 py-1 text-xs font-medium rounded-md border transition-colors",
                 activeStep.id === step.id
-                  ? "bg-blue-500 text-white border-blue-500"
-                  : "bg-white text-gray-600 border-gray-300 hover:border-blue-300"
+                  ? "bg-accent text-white border-accent"
+                  : "bg-white text-gray-600 border-gray-300 hover:border-accent-soft"
               )}
             >
               {idx + 1}. {step.title.length > 24 ? step.title.slice(0, 24) + "…" : step.title}
@@ -598,7 +598,7 @@ export function AddStepButton({ topicId }: AddStepButtonProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-400 hover:text-blue-500 hover:bg-blue-50">
+        <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-400 hover:text-accent hover:bg-accent-tint">
           <Plus className="h-3.5 w-3.5" />
         </Button>
       </DialogTrigger>
@@ -1013,7 +1013,7 @@ export function QuizBuilder({ quiz }: QuizBuilderProps) {
             className="border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50/50"
           >
             <div className="flex items-start gap-2">
-              <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-semibold flex-shrink-0 mt-0.5">
+              <span className="w-6 h-6 rounded-full bg-accent-soft text-accent-hover flex items-center justify-center text-xs font-semibold flex-shrink-0 mt-0.5">
                 {qIdx + 1}
               </span>
               <div className="flex-1 space-y-3">
@@ -1059,7 +1059,7 @@ export function QuizBuilder({ quiz }: QuizBuilderProps) {
                             className={cn(
                               "w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors",
                               q.correctAnswer === opt || q.correctAnswer === String(oIdx)
-                                ? "border-blue-500 bg-blue-500"
+                                ? "border-accent bg-accent"
                                 : "border-gray-300"
                             )}
                           />
@@ -1070,7 +1070,7 @@ export function QuizBuilder({ quiz }: QuizBuilderProps) {
                             className={cn(
                               "w-4 h-4 rounded border-2 flex-shrink-0 transition-colors",
                               Array.isArray(q.correctAnswer) && (q.correctAnswer.includes(opt) || q.correctAnswer.includes(String(oIdx)))
-                                ? "border-blue-500 bg-blue-500"
+                                ? "border-accent bg-accent"
                                 : "border-gray-300"
                             )}
                           />
@@ -1080,7 +1080,7 @@ export function QuizBuilder({ quiz }: QuizBuilderProps) {
                           <span className="text-sm text-gray-700">{opt}</span>
                         ) : (
                           <input
-                            className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="flex-1 rounded-md border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
                             placeholder={`Option ${oIdx + 1}`}
                             value={opt}
                             onChange={(e) => updateOption(qIdx, oIdx, e.target.value)}
@@ -1102,7 +1102,7 @@ export function QuizBuilder({ quiz }: QuizBuilderProps) {
                       <button
                         type="button"
                         onClick={() => addOption(qIdx)}
-                        className="text-xs text-blue-500 hover:text-blue-600 flex items-center gap-1"
+                        className="text-xs text-accent hover:text-accent flex items-center gap-1"
                       >
                         <Plus className="h-3 w-3" />
                         Add option

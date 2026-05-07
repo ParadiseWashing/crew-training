@@ -149,8 +149,8 @@ export default async function TopicDetailPage({ params }: PageProps) {
                 <QuizBuilder quiz={serializedQuiz!} />
               ) : (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <div className="h-12 w-12 rounded-full bg-blue-50 flex items-center justify-center mb-3">
-                    <HelpCircle className="h-6 w-6 text-blue-300" />
+                  <div className="h-12 w-12 rounded-full bg-accent-tint flex items-center justify-center mb-3">
+                    <HelpCircle className="h-6 w-6 text-muted" />
                   </div>
                   <p className="text-sm text-gray-500 font-medium">No quiz yet</p>
                   <p className="text-xs text-gray-400 mt-1">

@@ -122,7 +122,7 @@ export default async function PeoplePage() {
                             <div className="min-w-0">
                               <Link
                                 href={`/admin/people/${user.id}`}
-                                className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors truncate block"
+                                className="text-sm font-semibold text-gray-900 hover:text-accent transition-colors truncate block"
                               >
                                 {user.name}
                               </Link>
@@ -182,7 +182,7 @@ export default async function PeoplePage() {
                           <div className="flex items-center gap-1 justify-end">
                             <Link
                               href={`/admin/people/${user.id}`}
-                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                              className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-accent hover:bg-accent-tint transition-colors"
                               title="View profile"
                             >
                               <svg
@@ -244,7 +244,7 @@ export default async function PeoplePage() {
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div
                           className="h-3 w-3 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: role.color ?? "#3B82F6" }}
+                          style={{ backgroundColor: role.color ?? "#F08A3E" }}
                         />
                         <CardTitle className="text-base truncate">{role.title}</CardTitle>
                       </div>

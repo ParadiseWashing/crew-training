@@ -24,7 +24,7 @@ export function TabsTrigger({ className, ...props }: React.ComponentPropsWithout
         "inline-flex items-center justify-center rounded-md px-4 py-1.5 text-sm font-medium transition-all",
         "text-gray-600 hover:text-gray-900",
         "data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm",
-        "focus:outline-none focus:ring-2 focus:ring-blue-500",
+        "focus:outline-none focus:ring-2 focus:ring-accent",
         className
       )}
       {...props}

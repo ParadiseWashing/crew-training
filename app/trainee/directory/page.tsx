@@ -42,7 +42,7 @@ export default async function DirectoryPage() {
       ? {
           id: u.jobRole.id,
           title: u.jobRole.title,
-          color: u.jobRole.color ?? "#3B82F6",
+          color: u.jobRole.color ?? "#F08A3E",
         }
       : null,
   }));
