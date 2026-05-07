@@ -19,6 +19,7 @@ import {
   Clock,
   ScrollText,
   Play,
+  Menu,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -929,8 +930,16 @@ export function SubjectViewerClient({
     ]
   );
 
-  // ── Rail collapse toggle ───────────────────────────────────────────────
+  // ── Rail collapse toggle (desktop) ─────────────────────────────────────
   const [railCollapsed, setRailCollapsed] = React.useState(false);
+
+  // ── Mobile rail drawer (slide-out on phones/tablets) ───────────────────
+  const [mobileRailOpen, setMobileRailOpen] = React.useState(false);
+
+  // Auto-close mobile drawer when active step changes (e.g. user tapped a step)
+  React.useEffect(() => {
+    setMobileRailOpen(false);
+  }, [activeStepId]);
 
   // ── Rail: collapsible topic state ───────────────────────────────────────
   const [openTopics, setOpenTopics] = React.useState<Set<string>>(() => {
@@ -976,6 +985,16 @@ export function SubjectViewerClient({
       <div className="tl">
         {/* ── Header strip ───────────────────────────────────────────── */}
         <header className="tl-head">
+          {/* Mobile-only hamburger to open rail */}
+          <button
+            type="button"
+            onClick={() => setMobileRailOpen(true)}
+            className="tl-head__menu"
+            aria-label="Open menu"
+            title="Open menu"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
           <Link
             href="/trainee/home"
             aria-label="Back to library"
@@ -1019,10 +1038,17 @@ export function SubjectViewerClient({
           )}
         </header>
 
+        {/* Mobile backdrop overlay (clicking it closes the rail drawer) */}
+        <div
+          className={cn("tl-mobile-overlay", mobileRailOpen && "is-open")}
+          onClick={() => setMobileRailOpen(false)}
+          aria-hidden="true"
+        />
+
         {/* ── Body: rail + content ───────────────────────────────────── */}
         <div className={cn("tl-body", railCollapsed && "is-rail-collapsed")}>
           {/* Left rail */}
-          <aside className="tl-rail">
+          <aside className={cn("tl-rail", mobileRailOpen && "is-mobile-open")}>
             <div className="tl-rail__head">
               <div className="tl-rail__title">{subjectTitle}</div>
               <div className="tl-rail__progress">

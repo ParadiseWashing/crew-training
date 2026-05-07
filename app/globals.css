@@ -586,14 +586,109 @@ html[data-theme="dark"] body { color: #F4F2EE; }
   transition: width .3s ease;
 }
 
-/* ── Responsive: stack rail above content on narrow screens ── */
+/* ── Mobile menu trigger (hamburger in header) ─────────────────────────────
+   Hidden by default; only shows on screens that use the slide-out rail. */
+.tl-head__menu {
+  display: none;
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.tl-head__menu:hover { background: var(--bg-hover); }
+
+/* Mobile rail backdrop */
+.tl-mobile-overlay {
+  display: none;
+  position: fixed;
+  inset: 60px 0 0 0;
+  background: rgba(14, 14, 14, 0.4);
+  z-index: 14;
+}
+.tl-mobile-overlay.is-open { display: block; }
+
+/* ── Tablet & phone (≤960px): rail becomes slide-out drawer ──────────────── */
 @media (max-width: 960px) {
+  /* Header: show the hamburger, hide marketing chrome that doesn't fit */
+  .tl-head { padding: 0 14px; gap: 10px; }
+  .tl-head__menu { display: inline-flex; }
+  .tl-head__back { display: none; }
+  .tl-head__pill { display: none; }
+  .tl-head__crumb-soft { display: none; }
+  .tl-head__crumbs > svg:first-of-type { display: none; }
+
+  /* Pane fills full width; rail is now an overlay drawer */
   .tl-body { grid-template-columns: 1fr; }
   .tl-rail {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    max-height: 280px;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    bottom: 0;
+    width: 320px;
+    max-width: 88vw;
+    z-index: 15;
+    border-right: 1px solid var(--border);
+    border-bottom: none;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 4px 0 16px rgba(14, 14, 14, 0.08);
   }
-  .tl-pane__inner { padding: 32px 24px 60px; }
-  .tl-pane__title { font-size: 28px; }
+  .tl-rail.is-mobile-open { transform: translateX(0); }
+  .tl-rail-toggle { display: none; }
+
+  /* Reset the desktop collapse state on mobile so the drawer is what governs */
+  .tl-body.is-rail-collapsed { grid-template-columns: 1fr; }
+  .tl-body.is-rail-collapsed .tl-rail {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .tl-pane__inner { padding: 28px 20px 56px; }
+  .tl-pane__title { font-size: 26px; }
+  .tl-pane__meta { gap: 8px; margin-bottom: 22px; }
+  .tl-content { font-size: 15px; }
 }
+
+/* ── Phones (≤640px): even tighter typography + simpler header ──────────── */
+@media (max-width: 640px) {
+  .tl-head { height: 56px; padding: 0 10px; gap: 8px; }
+  .tl { grid-template-rows: 56px 1fr; }
+  .tl-rail { top: 56px; }
+  .tl-mobile-overlay { inset: 56px 0 0 0; }
+  .tl-head__counter { padding: 4px 8px; font-size: 12px; }
+  .tl-head__counter strong { font-size: 13px; }
+  .tl-head__crumb { font-size: 13px; max-width: 140px; }
+  .tl-head__cta { padding: 0 10px; height: 32px; }
+  .tl-head__cta span,
+  .tl-head__cta > *:not(svg) { font-size: 12px; }
+
+  .tl-pane__inner { padding: 24px 16px 48px; }
+  .tl-pane__title { font-size: 22px; line-height: 1.2; }
+  .tl-pane__eyebrow { padding: 5px 10px 5px 6px; font-size: 11px; }
+  .tl-pane__meta-pill { padding: 3px 8px; font-size: 11px; }
+  .tl-pane__meta-soft { font-size: 11px; }
+
+  .tl-content { font-size: 15px; line-height: 1.65; }
+  .tl-content h3 { font-size: 16px; margin: 22px 0 8px; }
+  .tl-content ol, .tl-content ul { padding-left: 20px; }
+
+  .tl-foot { gap: 10px; flex-wrap: wrap; }
+  .tl-foot__progress { order: 3; flex-basis: 100%; }
+  .tl-foot__progress-track { width: 100%; }
+}
+
+/* Force any overflowing media (tables, wide pre, iframes) to respect the
+   pane on small screens — common Tiptap content gotcha. */
+.tl-content img,
+.tl-content iframe,
+.tl-content video,
+.tl-content pre {
+  max-width: 100%;
+}
+.tl-content pre { white-space: pre-wrap; word-break: break-word; }
+.tl-content table { display: block; overflow-x: auto; max-width: 100%; }
