@@ -142,7 +142,7 @@ export default function InvitePage() {
             </div>
             <div className="leading-tight">
               <p className="pa-wordmark text-3xl">Paradise</p>
-              <h1 className="text-white text-xl font-bold -mt-1">Crew Training</h1>
+              <h1 className="text-white text-xl font-bold -mt-1">Academy</h1>
               <p className="text-white/50 text-xs">Professional Cleaning</p>
             </div>
           </div>
@@ -168,7 +168,7 @@ export default function InvitePage() {
             </div>
             <div className="leading-tight">
               <p className="pa-wordmark text-2xl">Paradise</p>
-              <span className="text-n-900 text-base font-bold">Crew Training</span>
+              <span className="text-n-900 text-base font-bold">Academy</span>
             </div>
           </div>
 

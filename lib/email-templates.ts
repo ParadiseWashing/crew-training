@@ -46,7 +46,7 @@ If you didn't expect this email, you can safely ignore it.
           <tr>
             <td style="padding:40px 40px 20px 40px;text-align:center;background-color:#0E0E0E;color:#ffffff;border-bottom:4px solid #F08A3E;">
               <h1 style="margin:0;font-size:24px;font-weight:700;letter-spacing:-0.02em;">${company}</h1>
-              <p style="margin:8px 0 0 0;font-size:14px;color:#F08A3E;">Crew Training Portal</p>
+              <p style="margin:8px 0 0 0;font-size:14px;color:#F08A3E;">Academy</p>
             </td>
           </tr>
           <tr>
