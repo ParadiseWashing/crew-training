@@ -134,6 +134,7 @@ declare global {
         getCurrentTime: () => number;
         seekTo: (seconds: number, allowSeekAhead: boolean) => void;
         setPlaybackRate: (rate: number) => void;
+        playVideo: () => void;
       };
       PlayerState: { ENDED: number };
     };
@@ -186,6 +187,7 @@ function YouTubePlayer({ src, idx }: { src: string; idx: number }) {
   const maxWatchedRef = React.useRef(0);
   const pollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const isCompleted = completedUrls.has(src);
+  const [hasStarted, setHasStarted] = React.useState(false);
 
   React.useEffect(() => {
     if (!videoId) return;
@@ -242,7 +244,21 @@ function YouTubePlayer({ src, idx }: { src: string; idx: number }) {
 
   if (!videoId) return null;
 
-  const embedUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&disablekb=1&rel=0`;
+  // controls=0 removes YouTube's native control bar entirely (including the
+  // seek bar), so trainees can't click or drag the timeline to skip ahead. A
+  // custom overlay handles starting playback; once started, an invisible
+  // click-blocker covers the iframe so they can't pause or otherwise interact.
+  const embedUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&disablekb=1&rel=0&controls=0&modestbranding=1&fs=0`;
+
+  const handleStart = () => {
+    if (!playerRef.current) return;
+    try {
+      playerRef.current.playVideo();
+      setHasStarted(true);
+    } catch {
+      /* ignore */
+    }
+  };
 
   return (
     <div className="my-4 relative">
@@ -258,9 +274,20 @@ function YouTubePlayer({ src, idx }: { src: string; idx: number }) {
           src={embedUrl}
           className="absolute inset-0 w-full h-full"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
           title="YouTube video"
         />
+        {!hasStarted && (
+          <button
+            type="button"
+            onClick={handleStart}
+            className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/30 transition-colors group"
+            aria-label="Play video"
+          >
+            <span className="flex items-center justify-center h-16 w-16 rounded-full bg-white/95 group-hover:bg-white shadow-lg">
+              <Play className="h-7 w-7 text-black fill-black ml-1" />
+            </span>
+          </button>
+        )}
       </div>
       {!isCompleted && (
         <p className="text-xs text-amber-600 mt-1.5 flex items-center gap-1">
