@@ -158,7 +158,10 @@ html[data-theme="dark"] body { color: #F4F2EE; }
   background: var(--bg);
   display: grid;
   grid-template-rows: 60px 1fr;
-  z-index: 5;
+  /* z-index 50 sits above the global trainee sidebar's mobile hamburger
+     button (z-40) so it doesn't overlap the lesson header's own hamburger
+     in the top-left corner on mobile. */
+  z-index: 50;
   overflow: hidden;
 }
 @media (min-width: 1024px) {
@@ -614,10 +617,10 @@ html[data-theme="dark"] body { color: #F4F2EE; }
 
 /* ── Tablet & phone (≤960px): rail becomes slide-out drawer ──────────────── */
 @media (max-width: 960px) {
-  /* Header: show the hamburger, hide marketing chrome that doesn't fit */
-  .tl-head { padding: 0 14px; gap: 10px; }
+  /* Header: show the hamburger, keep the back arrow so users can leave the
+     subject; hide marketing chrome that doesn't fit at narrow widths. */
+  .tl-head { padding: 0 14px; gap: 8px; }
   .tl-head__menu { display: inline-flex; }
-  .tl-head__back { display: none; }
   .tl-head__pill { display: none; }
   .tl-head__crumb-soft { display: none; }
   .tl-head__crumbs > svg:first-of-type { display: none; }
