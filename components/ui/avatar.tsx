@@ -15,15 +15,16 @@ const sizeMap = {
   xl: "h-16 w-16 text-xl",
 };
 
+// Paradise-friendly palette — warm tones rotating around brand orange
 const colors = [
-  "bg-accent",
-  "bg-purple-500",
-  "bg-green-500",
-  "bg-amber-500",
-  "bg-rose-500",
-  "bg-teal-500",
-  "bg-indigo-500",
-  "bg-orange-500",
+  "bg-[#F08A3E]", // orange (brand)
+  "bg-[#0E0E0E]", // black (brand)
+  "bg-[#4FA66B]", // green
+  "bg-[#E8A23B]", // amber
+  "bg-[#4D7FBF]", // blue
+  "bg-[#7E5BD9]", // purple
+  "bg-[#D9701F]", // deep orange
+  "bg-[#34302C]", // espresso
 ];
 
 function getColor(name: string): string {

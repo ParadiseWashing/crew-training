@@ -58,7 +58,7 @@ export default async function AdminDashboard() {
           label="Total Crew"
           value={users.length}
           icon={<Users className="h-5 w-5" />}
-          color="blue"
+          color="black"
         />
         <StatCard
           label="Overall Completion"
@@ -70,7 +70,7 @@ export default async function AdminDashboard() {
           label="Published Subjects"
           value={publishedCount}
           icon={<BookOpen className="h-5 w-5" />}
-          color="purple"
+          color="orange"
         />
         <StatCard
           label="Completed Assignments"
@@ -87,7 +87,7 @@ export default async function AdminDashboard() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Team Progress</CardTitle>
-                <Link href="/admin/people" className="text-sm text-accent hover:text-accent font-medium">
+                <Link href="/admin/people" className="text-sm text-[#D9701F] hover:text-[#F08A3E] font-semibold">
                   View all →
                 </Link>
               </div>
@@ -104,12 +104,12 @@ export default async function AdminDashboard() {
                     <Link
                       key={user.id}
                       href={`/admin/people/${user.id}`}
-                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-[#F7F5F2] transition-colors group"
                     >
                       <Avatar name={user.name} image={user.image} size="sm" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-medium text-gray-900 group-hover:text-accent truncate">
+                          <p className="text-sm font-semibold text-[#0E0E0E] group-hover:text-[#D9701F] truncate">
                             {user.name}
                           </p>
                           {user.jobRole && (
@@ -120,14 +120,14 @@ export default async function AdminDashboard() {
                         </div>
                         <Progress value={avg} size="sm" className="mt-1.5 max-w-48" />
                       </div>
-                      <span className="text-sm font-semibold text-gray-700 flex-shrink-0">{avg}%</span>
+                      <span className="text-sm font-semibold text-[#0E0E0E] flex-shrink-0">{avg}%</span>
                     </Link>
                   );
                 })}
                 {users.length === 0 && (
-                  <div className="text-center py-8 text-gray-400">
+                  <div className="text-center py-8 text-[#948C82]">
                     <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No trainees yet. <Link href="/admin/people" className="text-accent">Add crew members</Link></p>
+                    <p className="text-sm">No trainees yet. <Link href="/admin/people" className="text-[#D9701F] font-semibold">Add crew members</Link></p>
                   </div>
                 )}
               </div>
@@ -148,11 +148,11 @@ export default async function AdminDashboard() {
                   <div key={p.id} className="flex items-start gap-2.5">
                     <Avatar name={p.user.name} size="sm" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-600 leading-relaxed">
-                        <span className="font-medium text-gray-800">{p.user.name}</span> completed{" "}
-                        <span className="font-medium">{p.step.title}</span>
+                      <p className="text-xs text-[#34302C] leading-relaxed">
+                        <span className="font-semibold text-[#0E0E0E]">{p.user.name}</span> completed{" "}
+                        <span className="font-semibold">{p.step.title}</span>
                       </p>
-                      <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                      <p className="text-xs text-[#948C82] flex items-center gap-1 mt-0.5">
                         <Clock className="h-3 w-3" />
                         {formatRelativeTime(p.completedAt)}
                       </p>
@@ -160,7 +160,7 @@ export default async function AdminDashboard() {
                   </div>
                 ))}
                 {recentProgress.length === 0 && (
-                  <p className="text-xs text-gray-400 text-center py-4">No activity yet</p>
+                  <p className="text-xs text-[#948C82] text-center py-4">No activity yet</p>
                 )}
               </div>
             </CardContent>
@@ -171,7 +171,7 @@ export default async function AdminDashboard() {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>Content</CardTitle>
-                <Link href="/admin/content" className="text-sm text-accent hover:text-accent font-medium">
+                <Link href="/admin/content" className="text-sm text-[#D9701F] hover:text-[#F08A3E] font-semibold">
                   Manage →
                 </Link>
               </div>
@@ -180,14 +180,14 @@ export default async function AdminDashboard() {
               <div className="space-y-2">
                 {subjects.slice(0, 5).map((subject) => (
                   <div key={subject.id} className="flex items-center gap-2">
-                    <div className={`h-2 w-2 rounded-full flex-shrink-0 ${subject.isPublished ? "bg-green-400" : "bg-gray-300"}`} />
-                    <p className="text-sm text-gray-700 flex-1 truncate">{subject.title}</p>
-                    <span className="text-xs text-gray-400">{subject._count.assignments}</span>
+                    <div className={`h-2 w-2 rounded-full flex-shrink-0 ${subject.isPublished ? "bg-[#4FA66B]" : "bg-[#D9D3CC]"}`} />
+                    <p className="text-sm text-[#34302C] flex-1 truncate">{subject.title}</p>
+                    <span className="text-xs text-[#948C82]">{subject._count.assignments}</span>
                   </div>
                 ))}
                 {subjects.length === 0 && (
-                  <p className="text-xs text-gray-400 text-center py-4">
-                    No subjects. <Link href="/admin/content" className="text-accent">Create one</Link>
+                  <p className="text-xs text-[#948C82] text-center py-4">
+                    No subjects. <Link href="/admin/content" className="text-[#D9701F] font-semibold">Create one</Link>
                   </p>
                 )}
               </div>

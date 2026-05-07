@@ -7,38 +7,38 @@ interface StatCardProps {
   value: string | number;
   icon: React.ReactNode;
   trend?: { value: number; label: string };
-  color?: "blue" | "green" | "amber" | "purple";
+  color?: "blue" | "green" | "amber" | "purple" | "orange" | "black";
   className?: string;
 }
 
-// Note: keeping the prop name "blue" for backwards compatibility with existing
-// callers — it now renders with the Paradise orange accent.
 const colorMap = {
-  blue: { bg: "bg-accent-tint", text: "text-accent", icon: "bg-accent-soft text-accent-hover" },
-  green: { bg: "bg-emerald-50", text: "text-success", icon: "bg-emerald-100 text-success" },
-  amber: { bg: "bg-amber-50", text: "text-warning", icon: "bg-amber-100 text-warning" },
-  purple: { bg: "bg-purple-50", text: "text-purple-600", icon: "bg-purple-100 text-purple-600" },
+  orange: { text: "text-[#0E0E0E]", icon: "bg-[#FEF5EC] text-[#D9701F]" },
+  black: { text: "text-[#0E0E0E]", icon: "bg-[#F1EEEA] text-[#0E0E0E]" },
+  blue: { text: "text-[#0E0E0E]", icon: "bg-[#E1EAF7] text-[#3A639C]" },
+  green: { text: "text-[#0E0E0E]", icon: "bg-[#E2F2E6] text-[#3F8556]" },
+  amber: { text: "text-[#0E0E0E]", icon: "bg-[#FAEBCF] text-[#A87317]" },
+  purple: { text: "text-[#0E0E0E]", icon: "bg-[#EDE7FA] text-[#5E40A8]" },
 };
 
-export function StatCard({ label, value, icon, trend, color = "blue", className }: StatCardProps) {
+export function StatCard({ label, value, icon, trend, color = "orange", className }: StatCardProps) {
   const colors = colorMap[color];
 
   return (
     <Card className={cn("p-5", className)}>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm font-medium text-muted">{label}</p>
-          <p className={cn("text-3xl font-bold mt-1", colors.text)}>{value}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.06em] text-[#6E665D]">{label}</p>
+          <p className={cn("text-3xl font-bold mt-1 tracking-tight", colors.text)}>{value}</p>
           {trend && (
-            <p className="text-xs text-muted mt-1">
-              <span className={trend.value >= 0 ? "text-success" : "text-destructive"}>
-                {trend.value >= 0 ? "+" : ""}{trend.value}%
+            <p className="text-xs text-[#6E665D] mt-1">
+              <span className={trend.value >= 0 ? "text-[#4FA66B] font-semibold" : "text-[#E5484D] font-semibold"}>
+                {trend.value >= 0 ? "▲ " : "▼ "}{Math.abs(trend.value)}%
               </span>{" "}
               {trend.label}
             </p>
           )}
         </div>
-        <div className={cn("p-2.5 rounded-xl", colors.icon)}>
+        <div className={cn("p-2.5 rounded-xl shrink-0", colors.icon)}>
           {icon}
         </div>
       </div>

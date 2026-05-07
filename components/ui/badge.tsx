@@ -2,17 +2,18 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: "default" | "success" | "warning" | "danger" | "info" | "outline";
+  variant?: "default" | "success" | "warning" | "danger" | "info" | "outline" | "accent";
 }
 
 export function Badge({ className, variant = "default", ...props }: BadgeProps) {
   const variants = {
-    default: "bg-gray-100 text-gray-700",
-    success: "bg-green-100 text-green-700",
-    warning: "bg-amber-100 text-amber-700",
-    danger: "bg-red-100 text-red-700",
-    info: "bg-accent-soft text-accent-hover",
-    outline: "border border-gray-300 text-gray-600",
+    default: "bg-[#F1EEEA] text-[#34302C]",
+    success: "bg-[#E2F2E6] text-[#3F8556]",
+    warning: "bg-[#FAEBCF] text-[#A87317]",
+    danger: "bg-[#FCE4E5] text-[#C53438]",
+    info: "bg-[#E1EAF7] text-[#3A639C]",
+    outline: "border border-[#D9D3CC] text-[#34302C]",
+    accent: "bg-[#FEF5EC] text-[#D9701F]",
   };
 
   return (

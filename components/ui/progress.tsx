@@ -14,25 +14,28 @@ export function Progress({ value, className, barClassName, showLabel, size = "md
 
   const heights = { sm: "h-1.5", md: "h-2.5", lg: "h-4" };
 
+  // Paradise palette: red (low) → orange (mid) → green (done)
   const color =
     clamped === 100
-      ? "bg-green-500"
-      : clamped > 50
-      ? "bg-accent"
+      ? "bg-[#4FA66B]"
+      : clamped >= 80
+      ? "bg-[#4FA66B]"
+      : clamped >= 35
+      ? "bg-[#F08A3E]"
       : clamped > 0
-      ? "bg-amber-500"
-      : "bg-gray-200";
+      ? "bg-[#E5484D]"
+      : "bg-[#E8E4DE]";
 
   return (
     <div className={cn("flex items-center gap-3", className)}>
-      <div className={cn("flex-1 bg-gray-100 rounded-full overflow-hidden", heights[size])}>
+      <div className={cn("flex-1 bg-[#F1EEEA] rounded-full overflow-hidden", heights[size])}>
         <div
           className={cn("h-full rounded-full transition-all duration-500", color, barClassName)}
           style={{ width: `${clamped}%` }}
         />
       </div>
       {showLabel && (
-        <span className="text-xs font-medium text-gray-500 w-9 text-right">{clamped}%</span>
+        <span className="text-xs font-semibold text-[#0E0E0E] w-9 text-right">{clamped}%</span>
       )}
     </div>
   );

@@ -1,26 +1,11 @@
 import type { Metadata } from "next";
-import { Poppins, Caveat } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/toast";
 import { Providers } from "./providers";
 
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-poppins",
-  display: "swap",
-});
-
-const caveat = Caveat({
-  subsets: ["latin"],
-  weight: ["400", "700"],
-  variable: "--font-caveat",
-  display: "swap",
-});
-
 export const metadata: Metadata = {
-  title: "Crew Training",
-  description: "Employee training and onboarding platform for cleaning professionals",
+  title: "Paradise Academy",
+  description: "Training portal for Paradise Washing crews",
 };
 
 export const viewport = {
@@ -30,8 +15,16 @@ export const viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${poppins.variable} ${caveat.variable}`}>
-      <body className="min-h-screen bg-surface">
+    <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Caveat:wght@500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="min-h-screen bg-surface font-sans">
         <Providers>
           <ToastProvider>
             {children}

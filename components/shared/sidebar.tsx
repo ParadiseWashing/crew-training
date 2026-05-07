@@ -42,21 +42,25 @@ export function Sidebar({ user }: SidebarProps) {
   const navItems = isAdmin ? adminNav : traineeNav;
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full">
-      {/* Logo */}
-      <div className="px-5 py-5 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-accent flex items-center justify-center shadow-sm flex-shrink-0">
-            <GraduationCap className="h-5 w-5 text-white" />
+    <div className="flex flex-col h-full bg-[#FFFFFF]">
+      {/* Brand: Paradise wordmark */}
+      <div className="px-5 py-5 border-b border-[#E8E4DE]">
+        <Link href={isAdmin ? "/admin/dashboard" : "/trainee/home"} className="flex items-center gap-3">
+          <div className="h-9 w-9 rounded-xl bg-[#0E0E0E] flex items-center justify-center text-lg">
+            🌴
           </div>
-          <div className="leading-tight">
-            <p className="pa-wordmark text-2xl">Paradise</p>
-            <p className="text-sm font-semibold text-sidebar-foreground -mt-0.5">Crew Training</p>
-            <p className="text-xs text-muted">
-              {isAdmin ? "Admin Portal" : "Training Portal"}
+          <div className="leading-none">
+            <p
+              className="text-[28px] text-[#F08A3E] -mb-1"
+              style={{ fontFamily: "'Caveat', cursive", letterSpacing: "0.5px" }}
+            >
+              Paradise
+            </p>
+            <p className="text-[#6E665D] text-[10px] uppercase tracking-[0.12em] font-semibold">
+              {isAdmin ? "Academy · Admin" : "Academy"}
             </p>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Nav */}
@@ -69,34 +73,31 @@ export function Sidebar({ user }: SidebarProps) {
               href={item.href}
               onClick={() => setMobileOpen(false)}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative",
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-accent-tint text-accent-hover"
-                  : "text-sidebar-foreground/80 hover:bg-n-50 hover:text-sidebar-foreground"
+                  ? "bg-[#FEF5EC] text-[#D9701F]"
+                  : "text-[#34302C] hover:bg-[#F7F5F2] hover:text-[#0E0E0E]"
               )}
             >
-              {isActive && (
-                <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-accent" />
-              )}
               {item.icon}
               {item.label}
-              {isActive && <ChevronRight className="h-4 w-4 ml-auto" />}
+              {isActive && <ChevronRight className="h-4 w-4 ml-auto opacity-70" />}
             </Link>
           );
         })}
       </nav>
 
       {/* User */}
-      <div className="px-3 py-3 border-t border-sidebar-border">
-        <div className="flex items-center gap-3 px-2 py-2 rounded-lg">
+      <div className="px-3 py-3 border-t border-[#E8E4DE]">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-lg bg-[#F7F5F2]">
           <Avatar name={user.name} image={user.image} size="sm" />
           <div className="flex-1 min-w-0">
-            <p className="text-sidebar-foreground text-sm font-medium truncate">{user.name}</p>
-            <p className="text-muted text-xs truncate">{user.email}</p>
+            <p className="text-[#0E0E0E] text-sm font-semibold truncate">{user.name}</p>
+            <p className="text-[#6E665D] text-xs truncate">{user.email}</p>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="text-muted-foreground hover:text-sidebar-foreground transition-colors p-1.5 rounded-md hover:bg-n-50"
+            className="text-[#6E665D] hover:text-[#0E0E0E] transition-colors p-1 rounded"
             title="Sign out"
           >
             <LogOut className="h-4 w-4" />
@@ -111,7 +112,7 @@ export function Sidebar({ user }: SidebarProps) {
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="fixed top-4 left-4 z-40 lg:hidden bg-card text-sidebar-foreground border border-sidebar-border p-2 rounded-lg shadow-sm"
+        className="fixed top-4 left-4 z-40 lg:hidden bg-white text-[#0E0E0E] p-2 rounded-lg shadow border border-[#E8E4DE]"
       >
         <Menu className="h-5 w-5" />
       </button>
@@ -119,7 +120,7 @@ export function Sidebar({ user }: SidebarProps) {
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -127,13 +128,13 @@ export function Sidebar({ user }: SidebarProps) {
       {/* Mobile drawer */}
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-72 bg-sidebar border-r border-sidebar-border shadow-xl transform transition-transform lg:hidden",
+          "fixed inset-y-0 left-0 z-50 w-64 bg-white transform transition-transform lg:hidden border-r border-[#E8E4DE]",
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <button
           onClick={() => setMobileOpen(false)}
-          className="absolute right-3 top-4 text-muted-foreground hover:text-sidebar-foreground p-1 rounded-md hover:bg-n-50"
+          className="absolute right-4 top-4 text-[#6E665D] hover:text-[#0E0E0E] z-10"
         >
           <X className="h-5 w-5" />
         </button>
@@ -141,7 +142,7 @@ export function Sidebar({ user }: SidebarProps) {
       </div>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-sidebar border-r border-sidebar-border flex-col z-30">
+      <div className="hidden lg:flex fixed inset-y-0 left-0 w-64 bg-white border-r border-[#E8E4DE] flex-col z-30">
         <SidebarContent />
       </div>
     </>
