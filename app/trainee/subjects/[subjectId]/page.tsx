@@ -1,10 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Breadcrumb } from "@/components/shared/page-header";
-import { Badge } from "@/components/ui/badge";
-import { categoryColor, categoryLabel } from "@/lib/utils";
-import { CheckCircle2, BookOpen } from "lucide-react";
 import { SubjectViewerClient } from "./subject-viewer-client";
 
 export const dynamic = "force-dynamic";
@@ -76,11 +72,6 @@ export default async function SubjectViewerPage({ params, searchParams }: PagePr
   const existingSignOff = subject.signOffs[0] ?? null;
   const allStepsComplete = totalSteps > 0 && completedCount === totalSteps;
 
-  // Find which topic the active step belongs to
-  const activeTopic = activeStep
-    ? subject.topics.find((t) => t.steps.some((s) => s.id === activeStep.id)) ?? null
-    : null;
-
   // For each topic — check if all steps complete (to show quiz prompt)
   const topicCompletionMap = Object.fromEntries(
     subject.topics.map((t) => [
@@ -116,68 +107,24 @@ export default async function SubjectViewerPage({ params, searchParams }: PagePr
   }));
 
   return (
-    <div className="-mx-4 sm:-mx-6 -mt-6">
-      {/* Top bar */}
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 sm:px-6 py-3">
-        <div className="max-w-none flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <Breadcrumb
-              items={[
-                { label: "Training", href: "/trainee/home" },
-                { label: subject.title },
-              ]}
-            />
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <h1 className="text-base font-semibold text-gray-900 truncate">
-                {subject.title}
-              </h1>
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${categoryColor(
-                  subject.category
-                )}`}
-              >
-                {categoryLabel(subject.category)}
-              </span>
-            </div>
-          </div>
-
-          {/* Progress summary */}
-          <div className="flex-shrink-0 flex items-center gap-2 text-sm text-gray-500">
-            <BookOpen className="h-4 w-4" />
-            <span>
-              <span className="font-semibold text-gray-900">{completedCount}</span>
-              /{totalSteps} steps
-            </span>
-            {allStepsComplete && (
-              <Badge variant="success" className="gap-1">
-                <CheckCircle2 className="h-3 w-3" />
-                Done
-              </Badge>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Main viewer */}
-      <SubjectViewerClient
-        subjectId={subjectId}
-        subjectTitle={subject.title}
-        topics={serializedTopics}
-        activeStepId={resolvedStepId}
-        activeStepContent={
-          activeStep ? (activeStep.content as object) : null
-        }
-        activeStepTitle={activeStep?.title ?? null}
-        allStepsComplete={allStepsComplete}
-        requiresSignOff={subject.requiresSignOff}
-        existingSignOff={
-          existingSignOff
-            ? { signedName: existingSignOff.signedName, signedAt: existingSignOff.signedAt.toISOString() }
-            : null
-        }
-        userId={session.user.id}
-        userName={session.user.name ?? ""}
-      />
-    </div>
+    <SubjectViewerClient
+      subjectId={subjectId}
+      subjectTitle={subject.title}
+      topics={serializedTopics}
+      activeStepId={resolvedStepId}
+      activeStepContent={
+        activeStep ? (activeStep.content as object) : null
+      }
+      activeStepTitle={activeStep?.title ?? null}
+      allStepsComplete={allStepsComplete}
+      requiresSignOff={subject.requiresSignOff}
+      existingSignOff={
+        existingSignOff
+          ? { signedName: existingSignOff.signedName, signedAt: existingSignOff.signedAt.toISOString() }
+          : null
+      }
+      userId={session.user.id}
+      userName={session.user.name ?? ""}
+    />
   );
 }

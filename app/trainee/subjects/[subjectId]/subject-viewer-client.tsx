@@ -12,8 +12,6 @@ import {
   ChevronRight,
   ChevronLeft,
   ChevronDown,
-  Menu,
-  X,
   HelpCircle,
   PenLine,
   BookOpen,
@@ -737,153 +735,7 @@ export function SignOffPanel({
   );
 }
 
-// ─── Step Sidebar ─────────────────────────────────────────────────────────────
-
-function SidebarContent({
-  topics,
-  activeStepId,
-  subjectId,
-  onNavigate,
-  lockedStepIds,
-}: {
-  topics: TopicMeta[];
-  activeStepId: string | null;
-  subjectId: string;
-  onNavigate?: () => void;
-  lockedStepIds: Set<string>;
-}) {
-  const [expandedTopics, setExpandedTopics] = React.useState<Set<string>>(() => {
-    const set = new Set<string>();
-    for (const t of topics) {
-      if (t.steps.some((s) => s.id === activeStepId)) set.add(t.id);
-    }
-    for (const t of topics) set.add(t.id);
-    return set;
-  });
-
-  const toggleTopic = (topicId: string) => {
-    setExpandedTopics((prev) => {
-      const next = new Set(prev);
-      if (next.has(topicId)) next.delete(topicId);
-      else next.add(topicId);
-      return next;
-    });
-  };
-
-  return (
-    <nav className="py-4">
-      {topics.map((topic, topicIdx) => {
-        const isExpanded = expandedTopics.has(topic.id);
-        const completedInTopic = topic.steps.filter((s) => s.completed).length;
-
-        return (
-          <div key={topic.id} className="mb-1">
-            <button
-              onClick={() => toggleTopic(topic.id)}
-              className="w-full flex items-center justify-between px-4 py-2 text-left hover:bg-gray-50 transition-colors group"
-            >
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center text-xs font-medium">
-                  {topicIdx + 1}
-                </span>
-                <span className="text-sm font-medium text-gray-800 truncate">{topic.title}</span>
-              </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                {topic.allStepsComplete && (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                )}
-                <span className="text-xs text-gray-400">
-                  {completedInTopic}/{topic.steps.length}
-                </span>
-                <ChevronDown
-                  className={cn(
-                    "h-3.5 w-3.5 text-gray-400 transition-transform",
-                    isExpanded && "rotate-180"
-                  )}
-                />
-              </div>
-            </button>
-
-            {isExpanded && (
-              <div className="pl-4">
-                {topic.steps.map((step) => {
-                  const isActive = step.id === activeStepId;
-                  const isLocked = lockedStepIds.has(step.id);
-
-                  if (isLocked) {
-                    return (
-                      <div
-                        key={step.id}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-400 cursor-not-allowed select-none"
-                      >
-                        <Lock className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="truncate">{step.title}</span>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <Link
-                      key={step.id}
-                      href={`/trainee/subjects/${subjectId}?step=${step.id}`}
-                      onClick={onNavigate}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors",
-                        isActive
-                          ? "bg-accent-tint text-accent-hover font-medium"
-                          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                      )}
-                    >
-                      {step.completed ? (
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                      ) : (
-                        <div
-                          className={cn(
-                            "h-4 w-4 rounded-full border-2 flex-shrink-0",
-                            isActive ? "border-accent" : "border-gray-300"
-                          )}
-                        />
-                      )}
-                      <span className="truncate">{step.title}</span>
-                    </Link>
-                  );
-                })}
-
-                {/* Quiz link — only when all steps in topic done */}
-                {topic.quiz && topic.allStepsComplete && (
-                  <Link
-                    href={`/trainee/subjects/${subjectId}/quiz/${topic.quiz.id}`}
-                    onClick={onNavigate}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-accent hover:bg-accent-tint transition-colors"
-                  >
-                    {topic.quiz.passed ? (
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
-                    ) : (
-                      <HelpCircle className="h-4 w-4 flex-shrink-0" />
-                    )}
-                    <span className="font-medium">
-                      {topic.quiz.passed ? "Quiz (Passed)" : "Take Quiz"}
-                    </span>
-                  </Link>
-                )}
-
-                {/* Locked quiz indicator */}
-                {topic.quiz && !topic.allStepsComplete && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm text-gray-400 cursor-not-allowed select-none">
-                    <Lock className="h-3.5 w-3.5 flex-shrink-0" />
-                    <span>Quiz (complete steps first)</span>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </nav>
-  );
-}
-
-// ─── Main Subject Viewer ──────────────────────────────────────────────────────
+// ─── Main Subject Viewer (Trainual-style .tl-* layout) ────────────────────────
 
 export function SubjectViewerClient({
   subjectId,
@@ -898,15 +750,26 @@ export function SubjectViewerClient({
   userId: _userId,
   userName,
 }: SubjectViewerClientProps) {
-  const [sidebarOpen, setSidebarOpen] = React.useState(false);
+  const router = useRouter();
+  const { toast } = useToast();
 
   // ── Sequential locking ──────────────────────────────────────────────────
-  const allStepsOrdered = topics
-    .slice()
-    .sort((a, b) => a.orderIndex - b.orderIndex)
-    .flatMap((t) =>
-      t.steps.slice().sort((a, b) => a.orderIndex - b.orderIndex)
-    );
+  const orderedTopics = React.useMemo(
+    () =>
+      topics
+        .slice()
+        .sort((a, b) => a.orderIndex - b.orderIndex)
+        .map((t) => ({
+          ...t,
+          steps: t.steps.slice().sort((a, b) => a.orderIndex - b.orderIndex),
+        })),
+    [topics]
+  );
+
+  const allStepsOrdered = React.useMemo(
+    () => orderedTopics.flatMap((t) => t.steps),
+    [orderedTopics]
+  );
 
   const lockedStepIds = React.useMemo(() => {
     const locked = new Set<string>();
@@ -918,7 +781,7 @@ export function SubjectViewerClient({
     return locked;
   }, [allStepsOrdered]);
 
-  // Prev/next nav (skip locked for next)
+  // Prev/next nav
   const currentIdx = activeStepId
     ? allStepsOrdered.findIndex((s) => s.id === activeStepId)
     : -1;
@@ -933,6 +796,11 @@ export function SubjectViewerClient({
     : null;
   const isCompleted = activeStep?.completed ?? false;
   const isLocked = activeStepId ? lockedStepIds.has(activeStepId) : false;
+
+  // Step counts for header counter + rail progress bar
+  const totalSteps = allStepsOrdered.length;
+  const doneSteps = allStepsOrdered.filter((s) => s.completed).length;
+  const completionPct = totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0;
 
   // ── Reading timer ───────────────────────────────────────────────────────
   const readingTime = estimatedReadingSeconds(activeStepContent);
@@ -998,7 +866,7 @@ export function SubjectViewerClient({
 
   // Active topic
   const activeTopic = activeStepId
-    ? topics.find((t) => t.steps.some((s) => s.id === activeStepId)) ?? null
+    ? orderedTopics.find((t) => t.steps.some((s) => s.id === activeStepId)) ?? null
     : null;
 
   const showTopicQuiz =
@@ -1013,200 +881,526 @@ export function SubjectViewerClient({
   const nextIsLocked = nextStep ? lockedStepIds.has(nextStep.id) : false;
   const canGoNext = isCompleted && !nextIsLocked;
 
+  // ── Mark complete handler (shared by header CTA + footer button) ────────
+  const [markLoading, setMarkLoading] = React.useState(false);
+
+  const handleMarkComplete = React.useCallback(
+    async (opts?: { thenGotoNext?: boolean }): Promise<boolean> => {
+      if (!activeStep || isCompleted || markLoading || !canComplete) return false;
+      setMarkLoading(true);
+      try {
+        const res = await fetch(`/api/progress/${activeStep.id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            timeSpentSeconds: timeOnPage,
+            scrolledToBottom,
+          }),
+        });
+        if (!res.ok) throw new Error("Failed to mark complete");
+        toast("Step marked as complete!", "success");
+        if (opts?.thenGotoNext && nextStep && !lockedStepIds.has(nextStep.id)) {
+          // Optimistically navigate to next step. The server has already
+          // recorded completion; the next page render will reflect it.
+          router.push(`/trainee/subjects/${subjectId}?step=${nextStep.id}`);
+        } else {
+          router.refresh();
+        }
+        return true;
+      } catch {
+        toast("Something went wrong. Please try again.", "error");
+        return false;
+      } finally {
+        setMarkLoading(false);
+      }
+    },
+    [
+      activeStep,
+      isCompleted,
+      markLoading,
+      canComplete,
+      timeOnPage,
+      scrolledToBottom,
+      nextStep,
+      lockedStepIds,
+      router,
+      subjectId,
+      toast,
+    ]
+  );
+
+  // ── Rail: collapsible topic state ───────────────────────────────────────
+  const [openTopics, setOpenTopics] = React.useState<Set<string>>(() => {
+    return new Set(orderedTopics.map((t) => t.id));
+  });
+
+  // Auto-open the topic containing the active step on navigation.
+  React.useEffect(() => {
+    if (!activeStepId) return;
+    const topicWithActive = orderedTopics.find((t) =>
+      t.steps.some((s) => s.id === activeStepId)
+    );
+    if (topicWithActive) {
+      setOpenTopics((prev) => {
+        if (prev.has(topicWithActive.id)) return prev;
+        const next = new Set(prev);
+        next.add(topicWithActive.id);
+        return next;
+      });
+    }
+  }, [activeStepId, orderedTopics]);
+
+  const toggleTopic = (topicId: string) => {
+    setOpenTopics((prev) => {
+      const next = new Set(prev);
+      if (next.has(topicId)) next.delete(topicId);
+      else next.add(topicId);
+      return next;
+    });
+  };
+
+  // Step state classification for the rail icons
+  type StepState = "done" | "current" | "todo" | "locked";
+  const getStepState = (stepId: string, completed: boolean): StepState => {
+    if (completed) return "done";
+    if (lockedStepIds.has(stepId)) return "locked";
+    if (stepId === activeStepId) return "current";
+    return "todo";
+  };
+
   return (
     <VideoContext.Provider value={videoContext}>
-      <div className="flex min-h-[calc(100vh-57px)]">
-        {/* Mobile sidebar overlay */}
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-30 bg-black/40 lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        {/* Left sidebar */}
-        <aside
-          className={cn(
-            "fixed top-[57px] left-0 bottom-0 z-40 w-72 bg-white border-r border-gray-200 overflow-y-auto transition-transform lg:sticky lg:top-0 lg:translate-x-0 lg:h-[calc(100vh-57px)]",
-            sidebarOpen ? "translate-x-0" : "-translate-x-full",
-            "lg:block lg:flex-shrink-0"
-          )}
-        >
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 lg:hidden">
-            <span className="text-sm font-semibold text-gray-900">Contents</span>
-            <button onClick={() => setSidebarOpen(false)} className="text-gray-400 hover:text-gray-600">
-              <X className="h-5 w-5" />
-            </button>
+      <div className="tl">
+        {/* ── Header strip ───────────────────────────────────────────── */}
+        <header className="tl-head">
+          <Link
+            href="/trainee/home"
+            aria-label="Back to library"
+            className="tl-head__back"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Link>
+          <div className="tl-head__crumbs">
+            <span className="tl-head__crumb-soft">Training</span>
+            <ChevronRight className="h-3 w-3 flex-shrink-0" />
+            <span className="tl-head__crumb">{subjectTitle}</span>
           </div>
-
-          <SidebarContent
-            topics={topics}
-            activeStepId={activeStepId}
-            subjectId={subjectId}
-            onNavigate={() => setSidebarOpen(false)}
-            lockedStepIds={lockedStepIds}
-          />
-        </aside>
-
-        {/* Content area */}
-        <div className="flex-1 min-w-0">
-          <div className="lg:hidden sticky top-[57px] z-10 bg-white border-b border-gray-100 px-4 py-2.5">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+          <div className="tl-head__pill">
+            <span className="tl-head__pill-dot" />
+            Subject
+          </div>
+          <div className="tl-head__counter">
+            <BookOpen className="h-3.5 w-3.5" />
+            <span>
+              <strong>{doneSteps}</strong>/{totalSteps} steps
+            </span>
+          </div>
+          {activeStep && !isCompleted && !isLocked && (
+            <Button
+              size="sm"
+              variant="default"
+              loading={markLoading}
+              disabled={!canComplete || markLoading}
+              onClick={() => handleMarkComplete()}
+              className="tl-head__cta"
             >
-              <Menu className="h-4 w-4" />
-              <span>Contents</span>
-            </button>
-          </div>
+              <CheckCircle2 className="h-4 w-4" />
+              Mark complete
+            </Button>
+          )}
+          {activeStep && isCompleted && (
+            <span className="tl-head__cta inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600">
+              <CheckCircle2 className="h-4 w-4" />
+              Completed
+            </span>
+          )}
+        </header>
 
-          <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-            {isLocked ? (
-              // Locked step — show message
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <Lock className="h-12 w-12 text-gray-300 mb-4" />
-                <p className="text-base font-semibold text-gray-700 mb-1">Step Locked</p>
-                <p className="text-sm text-gray-400">
-                  Complete the previous step first to unlock this one.
-                </p>
+        {/* ── Body: rail + content ───────────────────────────────────── */}
+        <div className="tl-body">
+          {/* Left rail */}
+          <aside className="tl-rail">
+            <div className="tl-rail__head">
+              <div className="tl-rail__title">{subjectTitle}</div>
+              <div className="tl-rail__progress">
+                <div className="tl-rail__progress-track">
+                  <div
+                    className="tl-rail__progress-fill"
+                    style={{ width: `${completionPct}%` }}
+                  />
+                </div>
+                <span className="tl-rail__progress-num">{completionPct}%</span>
               </div>
-            ) : activeStep ? (
-              <>
-                {/* Step title */}
-                <h2 className="text-xl font-bold text-gray-900 mb-1">{activeStepTitle}</h2>
-                {activeTopic && (
-                  <p className="text-xs text-gray-400 mb-6">{activeTopic.title}</p>
-                )}
+            </div>
 
-                {/* Content */}
-                <div className="mb-8">
-                  <ContentRenderer content={activeStepContent} />
-                </div>
-
-                {/* Scroll sentinel */}
-                <div ref={contentEndRef} className="h-1" />
-
-                {/* Completion gate */}
-                {!isCompleted && (
-                  <CompletionGate
-                    readingDone={readingDone}
-                    scrollDone={scrolledToBottom}
-                    videosRequired={videoUrls.length}
-                    videosWatched={completedUrls.size}
-                    readingSecondsLeft={readingSecondsLeft}
-                  />
-                )}
-
-                {/* Mark complete */}
-                <div className="flex items-center justify-between py-4 border-t border-gray-100 mb-6">
-                  <MarkCompleteButton
-                    stepId={activeStep.id}
-                    completed={isCompleted}
-                    canComplete={canComplete}
-                    timeSpentSeconds={timeOnPage}
-                    scrolledToBottom={scrolledToBottom}
-                  />
-                </div>
-
-                {/* Topic quiz prompt */}
-                {showTopicQuiz && activeTopic?.quiz && (
-                  <div className="rounded-xl border border-accent-soft bg-accent-tint p-5 mb-6">
-                    <div className="flex items-center gap-2 mb-2">
-                      <HelpCircle className="h-5 w-5 text-accent" />
-                      <span className="font-semibold text-accent-hover text-sm">Quiz Available</span>
-                    </div>
-                    <p className="text-sm text-accent-hover mb-3">
-                      You&apos;ve completed all steps in{" "}
-                      <span className="font-medium">{activeTopic.title}</span>. Take the quiz to
-                      test your understanding.
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <Link href={`/trainee/subjects/${subjectId}/quiz/${activeTopic.quiz.id}`}>
-                        <Button variant="default" size="sm">
-                          Take Quiz →
-                        </Button>
-                      </Link>
-                      <span className="text-xs text-accent">
-                        Must score 100% &middot;{" "}
-                        {activeTopic.quiz.maxAttempts - activeTopic.quiz.attemptCount} attempt
-                        {activeTopic.quiz.maxAttempts - activeTopic.quiz.attemptCount !== 1
-                          ? "s"
-                          : ""}{" "}
-                        remaining
+            <div className="tl-rail__list">
+              {orderedTopics.map((topic, topicIdx) => {
+                const open = openTopics.has(topic.id);
+                const tDone = topic.steps.filter((s) => s.completed).length;
+                const tTotal = topic.steps.length;
+                const tComplete = topic.allStepsComplete;
+                return (
+                  <div key={topic.id} className="tl-topic">
+                    <button
+                      type="button"
+                      onClick={() => toggleTopic(topic.id)}
+                      className={cn("tl-topic__head", tComplete && "is-complete")}
+                    >
+                      <span
+                        className={cn("tl-topic__num", tComplete && "is-complete")}
+                      >
+                        {tComplete ? (
+                          <CheckCircle2 className="h-3 w-3" />
+                        ) : (
+                          topicIdx + 1
+                        )}
                       </span>
+                      <span className="tl-topic__title">{topic.title}</span>
+                      <span className="tl-topic__frac">
+                        {tDone}/{tTotal}
+                      </span>
+                      <span className={cn("tl-topic__chev", open && "is-open")}>
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      </span>
+                    </button>
+
+                    {open && (
+                      <div className="tl-topic__steps">
+                        {topic.steps.map((step) => {
+                          const state = getStepState(step.id, step.completed);
+                          const isActive = step.id === activeStepId;
+                          const stepLocked = state === "locked";
+
+                          const StepInner = (
+                            <>
+                              <span
+                                className={cn(
+                                  "tl-step__mark",
+                                  state === "done" && "tl-step__mark--done",
+                                  (state === "current" || state === "todo") &&
+                                    "tl-step__mark--idle",
+                                  state === "locked" && "tl-step__mark--locked"
+                                )}
+                                aria-label={
+                                  state === "done"
+                                    ? "Completed"
+                                    : state === "locked"
+                                    ? "Locked"
+                                    : "To do"
+                                }
+                              >
+                                {state === "done" && (
+                                  <svg
+                                    width="11"
+                                    height="11"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="3"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <polyline points="5 12 10 17 19 8" />
+                                  </svg>
+                                )}
+                                {state === "locked" && (
+                                  <Lock className="h-2.5 w-2.5" />
+                                )}
+                              </span>
+                              <span className="tl-step__title">{step.title}</span>
+                            </>
+                          );
+
+                          if (stepLocked) {
+                            return (
+                              <button
+                                key={step.id}
+                                type="button"
+                                disabled
+                                className={cn("tl-step", "tl-step--locked")}
+                              >
+                                {StepInner}
+                              </button>
+                            );
+                          }
+
+                          return (
+                            <Link
+                              key={step.id}
+                              href={`/trainee/subjects/${subjectId}?step=${step.id}`}
+                              className={cn("tl-step", isActive && "is-active")}
+                            >
+                              {StepInner}
+                            </Link>
+                          );
+                        })}
+
+                        {/* Quiz row */}
+                        {topic.quiz && topic.allStepsComplete && (
+                          <Link
+                            href={`/trainee/subjects/${subjectId}/quiz/${topic.quiz.id}`}
+                            className={cn("tl-step")}
+                          >
+                            <span
+                              className={cn(
+                                "tl-step__mark",
+                                topic.quiz.passed && "tl-step__mark--done"
+                              )}
+                            >
+                              {topic.quiz.passed ? (
+                                <svg
+                                  width="11"
+                                  height="11"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="3"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <polyline points="5 12 10 17 19 8" />
+                                </svg>
+                              ) : (
+                                <HelpCircle className="h-3 w-3 text-accent-hover" />
+                              )}
+                            </span>
+                            <span className="tl-step__title">
+                              {topic.quiz.passed ? "Quiz (Passed)" : "Take Quiz"}
+                            </span>
+                          </Link>
+                        )}
+                        {topic.quiz && !topic.allStepsComplete && (
+                          <button
+                            type="button"
+                            disabled
+                            className={cn("tl-step", "tl-step--locked")}
+                          >
+                            <span className="tl-step__mark tl-step__mark--locked">
+                              <Lock className="h-2.5 w-2.5" />
+                            </span>
+                            <span className="tl-step__title">Quiz (locked)</span>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </aside>
+
+          {/* Content pane */}
+          <main className="tl-pane">
+            <div className="tl-pane__inner">
+              {isLocked ? (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <Lock className="h-12 w-12 text-[#BDB6AD] mb-4" />
+                  <p className="text-base font-semibold text-[#34302C] mb-1">
+                    Step Locked
+                  </p>
+                  <p className="text-sm text-[#6E665D]">
+                    Complete the previous step first to unlock this one.
+                  </p>
+                </div>
+              ) : activeStep ? (
+                <>
+                  {activeTopic && (
+                    <div className="tl-pane__eyebrow">
+                      <span className="tl-pane__eyebrow-emoji">📘</span>
+                      <span>{activeTopic.title}</span>
                     </div>
-                  </div>
-                )}
-
-                {/* Passed quiz badge */}
-                {activeTopic?.quiz?.passed && (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 mb-6 flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                    <div>
-                      <span className="text-sm font-medium text-emerald-800">Quiz Passed</span>
-                      {activeTopic.quiz.lastScore !== null && (
-                        <span className="text-sm text-emerald-600 ml-2">
-                          Score: {activeTopic.quiz.lastScore}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Sign-off panel */}
-                {(showSignOff || existingSignOff) && (
-                  <div className="mb-6">
-                    <SignOffPanel
-                      subjectId={subjectId}
-                      subjectTitle={subjectTitle}
-                      existingSignOff={existingSignOff}
-                      defaultName={userName}
-                    />
-                  </div>
-                )}
-
-                {/* Step navigation */}
-                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                  {prevStep && !lockedStepIds.has(prevStep.id) ? (
-                    <Link href={`/trainee/subjects/${subjectId}?step=${prevStep.id}`}>
-                      <Button variant="outline" size="sm" className="gap-1">
-                        <ChevronLeft className="h-4 w-4" />
-                        Previous
-                      </Button>
-                    </Link>
-                  ) : (
-                    <div />
                   )}
 
-                  {nextStep ? (
-                    canGoNext ? (
-                      <Link href={`/trainee/subjects/${subjectId}?step=${nextStep.id}`}>
-                        <Button variant="default" size="sm" className="gap-1">
-                          Next
+                  <h1 className="tl-pane__title">{activeStepTitle}</h1>
+
+                  <div className="tl-pane__meta">
+                    {currentIdx >= 0 && (
+                      <span className="tl-pane__meta-pill">
+                        <span className="tl-pane__meta-dot" />
+                        Step {currentIdx + 1} of {totalSteps}
+                      </span>
+                    )}
+                    {readingTime > 0 && (
+                      <span className="tl-pane__meta-soft">
+                        ~{Math.max(1, Math.round(readingTime / 60))} min read
+                      </span>
+                    )}
+                  </div>
+
+                  <article className="tl-content">
+                    <ContentRenderer content={activeStepContent} />
+                  </article>
+
+                  {/* Scroll sentinel */}
+                  <div ref={contentEndRef} className="h-1" />
+
+                  {/* Completion gate */}
+                  {!isCompleted && (
+                    <CompletionGate
+                      readingDone={readingDone}
+                      scrollDone={scrolledToBottom}
+                      videosRequired={videoUrls.length}
+                      videosWatched={completedUrls.size}
+                      readingSecondsLeft={readingSecondsLeft}
+                    />
+                  )}
+
+                  {/* Topic quiz prompt */}
+                  {showTopicQuiz && activeTopic?.quiz && (
+                    <div className="rounded-xl border border-accent-soft bg-accent-tint p-5 mt-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <HelpCircle className="h-5 w-5 text-accent" />
+                        <span className="font-semibold text-accent-hover text-sm">
+                          Quiz Available
+                        </span>
+                      </div>
+                      <p className="text-sm text-accent-hover mb-3">
+                        You&apos;ve completed all steps in{" "}
+                        <span className="font-medium">{activeTopic.title}</span>.
+                        Take the quiz to test your understanding.
+                      </p>
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href={`/trainee/subjects/${subjectId}/quiz/${activeTopic.quiz.id}`}
+                        >
+                          <Button variant="default" size="sm">
+                            Take Quiz →
+                          </Button>
+                        </Link>
+                        <span className="text-xs text-accent">
+                          Must score 100% &middot;{" "}
+                          {activeTopic.quiz.maxAttempts -
+                            activeTopic.quiz.attemptCount}{" "}
+                          attempt
+                          {activeTopic.quiz.maxAttempts -
+                            activeTopic.quiz.attemptCount !==
+                          1
+                            ? "s"
+                            : ""}{" "}
+                          remaining
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Passed quiz badge */}
+                  {activeTopic?.quiz?.passed && (
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 mt-6 flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                      <div>
+                        <span className="text-sm font-medium text-emerald-800">
+                          Quiz Passed
+                        </span>
+                        {activeTopic.quiz.lastScore !== null && (
+                          <span className="text-sm text-emerald-600 ml-2">
+                            Score: {activeTopic.quiz.lastScore}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Sign-off panel */}
+                  {(showSignOff || existingSignOff) && (
+                    <div className="mt-6">
+                      <SignOffPanel
+                        subjectId={subjectId}
+                        subjectTitle={subjectTitle}
+                        existingSignOff={existingSignOff}
+                        defaultName={userName}
+                      />
+                    </div>
+                  )}
+
+                  {/* Footer nav */}
+                  <div className="tl-foot">
+                    {prevStep && !lockedStepIds.has(prevStep.id) ? (
+                      <Link
+                        href={`/trainee/subjects/${subjectId}?step=${prevStep.id}`}
+                      >
+                        <Button variant="outline" size="sm" className="tl-foot__nav">
+                          <ChevronLeft className="h-4 w-4" />
+                          <span>Previous</span>
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="tl-foot__nav"
+                        disabled
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        <span>Previous</span>
+                      </Button>
+                    )}
+
+                    <div className="tl-foot__progress">
+                      <span className="tl-foot__progress-label">
+                        Step {Math.max(currentIdx + 1, 1)} of {totalSteps}
+                      </span>
+                      <div className="tl-foot__progress-track">
+                        <div
+                          className="tl-foot__progress-fill"
+                          style={{
+                            width: `${
+                              totalSteps > 0
+                                ? ((currentIdx + 1) / totalSteps) * 100
+                                : 0
+                            }%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Right footer button: behavior depends on step state */}
+                    {!isCompleted ? (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        loading={markLoading}
+                        disabled={!canComplete || markLoading}
+                        onClick={() => handleMarkComplete({ thenGotoNext: true })}
+                        className="tl-foot__nav"
+                      >
+                        <span>Mark complete &amp; continue</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    ) : nextStep && canGoNext ? (
+                      <Link
+                        href={`/trainee/subjects/${subjectId}?step=${nextStep.id}`}
+                      >
+                        <Button variant="default" size="sm" className="tl-foot__nav">
+                          <span>Next</span>
                           <ChevronRight className="h-4 w-4" />
                         </Button>
                       </Link>
                     ) : (
-                      <Button variant="default" size="sm" className="gap-1" disabled>
-                        Next
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="tl-foot__nav"
+                        disabled
+                      >
+                        <span>Next</span>
                         <ChevronRight className="h-4 w-4" />
                       </Button>
-                    )
-                  ) : (
-                    <div />
-                  )}
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="text-5xl mb-4">📖</div>
+                  <p className="text-base font-semibold text-[#34302C] mb-1">
+                    No content yet
+                  </p>
+                  <p className="text-sm text-[#6E665D]">
+                    This subject doesn&apos;t have any steps yet.
+                  </p>
                 </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="text-5xl mb-4">📖</div>
-                <p className="text-base font-semibold text-gray-700 mb-1">No content yet</p>
-                <p className="text-sm text-gray-400">
-                  This subject doesn&apos;t have any steps yet.
-                </p>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          </main>
         </div>
       </div>
     </VideoContext.Provider>
