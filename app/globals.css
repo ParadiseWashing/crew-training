@@ -234,6 +234,57 @@ html[data-theme="dark"] body { color: #F4F2EE; }
   grid-template-columns: 320px 1fr;
   min-height: 0;
   overflow: hidden;
+  transition: grid-template-columns 0.25s ease;
+}
+.tl-body.is-rail-collapsed {
+  grid-template-columns: 0 1fr;
+}
+.tl-body.is-rail-collapsed .tl-rail {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.tl-rail {
+  transition: opacity 0.2s ease 0.05s;
+}
+
+/* Rail collapse toggle — half-overlaps the rail/pane border when expanded,
+   sits flush against the left edge when collapsed. */
+.tl-rail-toggle {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  width: 22px;
+  height: 44px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(14, 14, 14, 0.06);
+  transition: transform 0.25s ease, color 0.15s ease, border-color 0.15s ease, border-radius 0.25s ease;
+}
+.tl-rail-toggle:hover {
+  color: var(--accent-deep);
+  border-color: var(--border-strong);
+}
+.tl-rail-toggle svg {
+  transition: transform 0.2s ease;
+}
+.tl-body.is-rail-collapsed .tl-rail-toggle {
+  transform: translate(0, -50%);
+  border-left: none;
+  border-radius: 0 999px 999px 0;
+}
+.tl-body.is-rail-collapsed .tl-rail-toggle svg {
+  transform: rotate(180deg);
+}
+@media (max-width: 960px) {
+  .tl-rail-toggle { display: none; }
 }
 
 /* ── Left rail ──────────────────────────────────────────────── */
@@ -390,6 +441,7 @@ html[data-theme="dark"] body { color: #F4F2EE; }
 .tl-pane {
   background: var(--bg);
   overflow-y: auto;
+  position: relative;
 }
 .tl-pane__inner {
   max-width: 760px;

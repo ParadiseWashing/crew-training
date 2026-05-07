@@ -929,6 +929,9 @@ export function SubjectViewerClient({
     ]
   );
 
+  // ── Rail collapse toggle ───────────────────────────────────────────────
+  const [railCollapsed, setRailCollapsed] = React.useState(false);
+
   // ── Rail: collapsible topic state ───────────────────────────────────────
   const [openTopics, setOpenTopics] = React.useState<Set<string>>(() => {
     return new Set(orderedTopics.map((t) => t.id));
@@ -1017,7 +1020,7 @@ export function SubjectViewerClient({
         </header>
 
         {/* ── Body: rail + content ───────────────────────────────────── */}
-        <div className="tl-body">
+        <div className={cn("tl-body", railCollapsed && "is-rail-collapsed")}>
           {/* Left rail */}
           <aside className="tl-rail">
             <div className="tl-rail__head">
@@ -1191,6 +1194,17 @@ export function SubjectViewerClient({
 
           {/* Content pane */}
           <main className="tl-pane">
+            {/* Rail collapse toggle */}
+            <button
+              type="button"
+              onClick={() => setRailCollapsed((v) => !v)}
+              className="tl-rail-toggle"
+              aria-label={railCollapsed ? "Show menu" : "Hide menu"}
+              title={railCollapsed ? "Show menu" : "Hide menu"}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+
             <div className="tl-pane__inner">
               {isLocked ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
