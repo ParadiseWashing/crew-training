@@ -1192,19 +1192,19 @@ export function SubjectViewerClient({
             </div>
           </aside>
 
+          {/* Rail collapse toggle (sibling of rail + pane to avoid overflow clipping) */}
+          <button
+            type="button"
+            onClick={() => setRailCollapsed((v) => !v)}
+            className="tl-rail-toggle"
+            aria-label={railCollapsed ? "Show menu" : "Hide menu"}
+            title={railCollapsed ? "Show menu" : "Hide menu"}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+
           {/* Content pane */}
           <main className="tl-pane">
-            {/* Rail collapse toggle */}
-            <button
-              type="button"
-              onClick={() => setRailCollapsed((v) => !v)}
-              className="tl-rail-toggle"
-              aria-label={railCollapsed ? "Show menu" : "Hide menu"}
-              title={railCollapsed ? "Show menu" : "Hide menu"}
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
-            </button>
-
             <div className="tl-pane__inner">
               {isLocked ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center">
