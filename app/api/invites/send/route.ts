@@ -7,7 +7,7 @@ import { sendInviteEmail } from "@/lib/email";
 function buildBaseUrl(host: string | null, proto: string | null): string {
   if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
   const scheme = proto === "http" ? "http" : "https";
-  return host ? `${scheme}://${host}` : "https://crew-training.vercel.app";
+  return host ? `${scheme}://${host}` : "https://paradiseacademy.vercel.app";
 }
 
 export async function POST() {

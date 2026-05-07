@@ -7,7 +7,7 @@
 export interface InviteEmailData {
   recipientName: string;
   recipientEmail: string;
-  inviteUrl: string; // e.g. https://crew-training.vercel.app/invite/abc123
+  inviteUrl: string; // e.g. https://paradiseacademy.vercel.app/invite/abc123
   companyName?: string;
 }
 
