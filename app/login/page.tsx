@@ -151,12 +151,6 @@ export default function LoginPage() {
           <p className="mt-6 text-center text-xs text-muted-foreground">
             Contact your manager if you need access.
           </p>
-
-          <div className="mt-8 p-4 bg-n-50 rounded-xl border border-border text-xs text-muted">
-            <p className="font-medium text-n-700 mb-2">Demo Accounts:</p>
-            <p>Admin: <span className="font-mono">admin@crewtraining.com</span> / <span className="font-mono">admin123</span></p>
-            <p>Trainee: <span className="font-mono">crew@crewtraining.com</span> / <span className="font-mono">crew123</span></p>
-          </div>
         </div>
       </div>
     </div>

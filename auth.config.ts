@@ -4,7 +4,13 @@ import type { NextAuthConfig } from "next-auth";
 // Edge-compatible auth config — no Prisma, no Node.js built-ins.
 // Used by middleware. Full config is in lib/auth.ts.
 export const authConfig = {
-    session: { strategy: "jwt" },
+    session: {
+          strategy: "jwt",
+          // Absolute session cap: 30 days.
+          maxAge: 30 * 24 * 60 * 60,
+          // Refresh the JWT at most once per day on activity.
+          updateAge: 24 * 60 * 60,
+    },
     pages: {
           signIn: "/login",
           error: "/login",
