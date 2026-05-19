@@ -57,12 +57,52 @@ interface SubjectViewerClientProps {
   topics: TopicMeta[];
   activeStepId: string | null;
   activeStepContent: object | null;
+  activeStepType: "CONTENT" | "PDF" | null;
   activeStepTitle: string | null;
   allStepsComplete: boolean;
   requiresSignOff: boolean;
   existingSignOff: { signedName: string; signedAt: string } | null;
   userId: string;
   userName: string;
+}
+
+// ─── PDF Step Renderer ────────────────────────────────────────────────────────
+
+function PdfStepRenderer({
+  fileUrl,
+  fileName,
+  onLoaded,
+}: {
+  fileUrl: string | null;
+  fileName: string | null;
+  onLoaded: () => void;
+}) {
+  if (!fileUrl) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <BookOpen className="h-10 w-10 text-gray-200 mb-3" />
+        <p className="text-sm text-gray-400">No PDF uploaded for this step yet.</p>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
+      <iframe
+        src={fileUrl}
+        title={fileName ?? "SOP PDF"}
+        onLoad={onLoaded}
+        className="w-full h-[75vh] block"
+      >
+        <p className="p-4 text-sm text-gray-500">
+          Your browser cannot display this PDF.{" "}
+          <a href={fileUrl} className="text-accent underline" target="_blank" rel="noopener noreferrer">
+            Download the SOP
+          </a>
+          .
+        </p>
+      </iframe>
+    </div>
+  );
 }
 
 // ─── Tiptap Types ─────────────────────────────────────────────────────────────
@@ -744,6 +784,7 @@ export function SubjectViewerClient({
   topics,
   activeStepId,
   activeStepContent,
+  activeStepType,
   activeStepTitle,
   allStepsComplete,
   requiresSignOff,
@@ -751,6 +792,11 @@ export function SubjectViewerClient({
   userId: _userId,
   userName,
 }: SubjectViewerClientProps) {
+  const isPdfStep = activeStepType === "PDF";
+  const pdfContent = isPdfStep
+    ? (activeStepContent as { type?: string; fileUrl?: string | null; fileName?: string | null } | null)
+    : null;
+  const pdfFileUrl = pdfContent?.fileUrl ?? null;
   const router = useRouter();
   const { toast } = useToast();
 
@@ -804,8 +850,15 @@ export function SubjectViewerClient({
   const completionPct = totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0;
 
   // ── Reading timer ───────────────────────────────────────────────────────
-  const readingTime = estimatedReadingSeconds(activeStepContent);
+  // PDF steps don't have rich text — skip the reading-time gate entirely.
+  const readingTime = isPdfStep ? 0 : estimatedReadingSeconds(activeStepContent);
   const [timeOnPage, setTimeOnPage] = React.useState(0);
+
+  // ── PDF "opened" gate (replaces scroll/reading/video gates for PDF steps) ─
+  const [pdfOpened, setPdfOpened] = React.useState(false);
+  React.useEffect(() => {
+    setPdfOpened(false);
+  }, [activeStepId]);
 
   React.useEffect(() => {
     setTimeOnPage(0);
@@ -863,7 +916,9 @@ export function SubjectViewerClient({
 
   // ── Completion gate ─────────────────────────────────────────────────────
   const allVideosDone = completedUrls.size >= videoUrls.length;
-  const canComplete = readingDone && scrolledToBottom && allVideosDone;
+  const canComplete = isPdfStep
+    ? Boolean(pdfFileUrl) && pdfOpened // PDF gate: file uploaded AND iframe loaded at least once
+    : readingDone && scrolledToBottom && allVideosDone;
 
   // Active topic
   const activeTopic = activeStepId
@@ -1268,14 +1323,22 @@ export function SubjectViewerClient({
                   </div>
 
                   <article className="tl-content">
-                    <ContentRenderer content={activeStepContent} />
+                    {isPdfStep ? (
+                      <PdfStepRenderer
+                        fileUrl={pdfFileUrl}
+                        fileName={pdfContent?.fileName ?? null}
+                        onLoaded={() => setPdfOpened(true)}
+                      />
+                    ) : (
+                      <ContentRenderer content={activeStepContent} />
+                    )}
                   </article>
 
                   {/* Scroll sentinel */}
                   <div ref={contentEndRef} className="h-1" />
 
                   {/* Completion gate */}
-                  {!isCompleted && (
+                  {!isCompleted && !isPdfStep && (
                     <CompletionGate
                       readingDone={readingDone}
                       scrollDone={scrolledToBottom}
@@ -1283,6 +1346,18 @@ export function SubjectViewerClient({
                       videosWatched={completedUrls.size}
                       readingSecondsLeft={readingSecondsLeft}
                     />
+                  )}
+                  {!isCompleted && isPdfStep && !canComplete && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 mb-4 mt-4">
+                      <p className="text-xs font-semibold text-amber-800 mb-1 uppercase tracking-wide">
+                        Complete before continuing
+                      </p>
+                      <p className="text-xs text-amber-700">
+                        {pdfFileUrl
+                          ? "Open the PDF above (give it a moment to load) before you can mark this step complete."
+                          : "No PDF has been uploaded for this step yet."}
+                      </p>
+                    </div>
                   )}
 
                   {/* Topic quiz prompt */}

@@ -139,11 +139,17 @@ model Step {
   topicId    String
   topic      Topic          @relation(fields: [topicId], references: [id], onDelete: Cascade)
   title      String
+  stepType   StepType       @default(CONTENT)
   content    Json
   orderIndex Int
   progress   StepProgress[]
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
+}
+
+enum StepType {
+  CONTENT
+  PDF
 }
 
 model StepProgress {

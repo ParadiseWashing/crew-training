@@ -89,6 +89,7 @@ export default async function SubjectViewerPage({ params, searchParams }: PagePr
     steps: topic.steps.map((step) => ({
       id: step.id,
       title: step.title,
+      stepType: step.stepType as "CONTENT" | "PDF",
       orderIndex: step.orderIndex,
       topicId: topic.id,
       completed: completedStepIds.has(step.id),
@@ -115,6 +116,7 @@ export default async function SubjectViewerPage({ params, searchParams }: PagePr
       activeStepContent={
         activeStep ? (activeStep.content as object) : null
       }
+      activeStepType={activeStep ? (activeStep.stepType as "CONTENT" | "PDF") : null}
       activeStepTitle={activeStep?.title ?? null}
       allStepsComplete={allStepsComplete}
       requiresSignOff={subject.requiresSignOff}

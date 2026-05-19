@@ -43,6 +43,7 @@ export default async function TopicDetailPage({ params }: PageProps) {
   const serializedSteps = topic.steps.map((step) => ({
     id: step.id,
     title: step.title,
+    stepType: step.stepType as "CONTENT" | "PDF",
     content: step.content as object,
     orderIndex: step.orderIndex,
   }));

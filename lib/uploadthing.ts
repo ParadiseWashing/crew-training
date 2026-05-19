@@ -11,6 +11,13 @@ export const ourFileRouter = {
     .onUploadComplete(async ({ file }) => {
       return { url: file.ufsUrl };
     }),
+  sopUploader: f({ pdf: { maxFileSize: "16MB", maxFileCount: 1 } })
+    .middleware(async () => {
+      return {};
+    })
+    .onUploadComplete(async ({ file }) => {
+      return { url: file.ufsUrl, name: file.name };
+    }),
 } satisfies FileRouter;
 
 export type OurFileRouter = typeof ourFileRouter;

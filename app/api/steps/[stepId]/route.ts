@@ -17,6 +17,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ st
       ...(body.title !== undefined && { title: body.title }),
       ...(body.content !== undefined && { content: body.content }),
       ...(body.orderIndex !== undefined && { orderIndex: body.orderIndex }),
+      ...(body.stepType !== undefined && { stepType: body.stepType }),
     },
   });
 

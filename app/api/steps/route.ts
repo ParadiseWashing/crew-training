@@ -9,22 +9,30 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { topicId, title } = body;
+  const { topicId, title, stepType } = body;
 
   if (!topicId || !title) {
     return NextResponse.json({ error: "topicId and title required" }, { status: 400 });
   }
+
+  const type = stepType === "PDF" ? "PDF" : "CONTENT";
 
   const last = await prisma.step.findFirst({
     where: { topicId },
     orderBy: { orderIndex: "desc" },
   });
 
+  const initialContent =
+    type === "PDF"
+      ? { type: "pdf", fileUrl: null, fileName: null }
+      : { type: "doc", content: [] };
+
   const step = await prisma.step.create({
     data: {
       topicId,
       title,
-      content: { type: "doc", content: [] },
+      stepType: type,
+      content: initialContent,
       orderIndex: (last?.orderIndex ?? -1) + 1,
     },
   });

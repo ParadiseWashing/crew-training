@@ -43,6 +43,8 @@ import {
   Video,
   Check,
   GripVertical,
+  FileText as FileTextIcon,
+  Upload,
 } from "lucide-react";
 import { genUploader } from "uploadthing/client";
 import type { OurFileRouter } from "@/lib/uploadthing";
@@ -75,9 +77,18 @@ import { cn } from "@/lib/utils";
 
 type QuestionType = "MULTIPLE_CHOICE" | "MULTIPLE_SELECT" | "TRUE_FALSE" | "WRITTEN_RESPONSE";
 
+type StepType = "CONTENT" | "PDF";
+
+interface PdfStepContent {
+  type: "pdf";
+  fileUrl: string | null;
+  fileName: string | null;
+}
+
 interface StepData {
   id: string;
   title: string;
+  stepType: StepType;
   content: object;
   orderIndex: number;
 }
@@ -352,11 +363,16 @@ function SortableStepItem({
             />
           ) : (
             <p
-              className="text-xs font-medium text-gray-700 flex-1 truncate group-hover:text-accent transition-colors cursor-text"
+              className="text-xs font-medium text-gray-700 flex-1 truncate group-hover:text-accent transition-colors cursor-text flex items-center gap-1.5"
               title="Click to rename"
               onClick={() => { setDraft(step.title); setEditing(true); }}
             >
-              {step.title}
+              <span className="truncate">{step.title}</span>
+              {step.stepType === "PDF" && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-accent-soft text-accent-hover flex-shrink-0">
+                  PDF
+                </span>
+              )}
             </p>
           )}
           <DeleteStepButton stepId={step.id} stepTitle={step.title} />
@@ -435,6 +451,14 @@ export function StepEditor({ steps }: StepEditorProps) {
   const [dirty, setDirty] = React.useState(false);
   const [uploading, setUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const pdfInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Keep activeStep in sync with parent's serialized snapshot (e.g., after router.refresh)
+  React.useEffect(() => {
+    const match = steps.find((s) => s.id === activeStep.id);
+    if (match) setActiveStep(match);
+    else setActiveStep(steps[0]);
+  }, [steps]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -446,20 +470,22 @@ export function StepEditor({ steps }: StepEditorProps) {
       TaskItem.configure({ nested: true }),
       Placeholder.configure({ placeholder: "Start writing step content..." }),
     ],
-    content: activeStep.content,
+    content: activeStep.stepType === "CONTENT" ? activeStep.content : { type: "doc", content: [] },
     onUpdate: () => setDirty(true),
   });
 
-  // Switch step content when active step changes
+  // Switch step content when active step changes (CONTENT only)
   React.useEffect(() => {
-    if (editor && activeStep) {
+    if (editor && activeStep && activeStep.stepType === "CONTENT") {
       editor.commands.setContent(activeStep.content);
+      setDirty(false);
+    } else {
       setDirty(false);
     }
   }, [activeStep.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function saveContent() {
-    if (!editor || !dirty) return;
+    if (!editor || !dirty || activeStep.stepType !== "CONTENT") return;
     setSaving(true);
     try {
       const res = await fetch(`/api/steps/${activeStep.id}`, {
@@ -496,6 +522,41 @@ export function StepEditor({ steps }: StepEditorProps) {
     }
   }
 
+  async function handlePdfSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    if (file.type !== "application/pdf") {
+      toast("Please upload a PDF file", "error");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const [result] = await uploadFiles("sopUploader", { files: [file] });
+      const newContent: PdfStepContent = {
+        type: "pdf",
+        fileUrl: result.ufsUrl,
+        fileName: file.name,
+      };
+      const res = await fetch(`/api/steps/${activeStep.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: newContent }),
+      });
+      if (!res.ok) throw new Error("Failed to save PDF");
+      toast("PDF uploaded", "success");
+      router.refresh();
+    } catch {
+      toast("Failed to upload PDF", "error");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  const pdfContent = activeStep.stepType === "PDF" ? (activeStep.content as PdfStepContent) : null;
+
   return (
     <div className="space-y-3">
       <input
@@ -504,6 +565,13 @@ export function StepEditor({ steps }: StepEditorProps) {
         accept="image/*"
         className="hidden"
         onChange={handleFileSelected}
+      />
+      <input
+        ref={pdfInputRef}
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={handlePdfSelected}
       />
       {/* Step selector tabs */}
       {steps.length > 1 && (
@@ -521,37 +589,116 @@ export function StepEditor({ steps }: StepEditorProps) {
                 }
               }}
               className={cn(
-                "px-2.5 py-1 text-xs font-medium rounded-md border transition-colors",
+                "px-2.5 py-1 text-xs font-medium rounded-md border transition-colors inline-flex items-center gap-1.5",
                 activeStep.id === step.id
                   ? "bg-accent text-white border-accent"
                   : "bg-white text-gray-600 border-gray-300 hover:border-accent-soft"
               )}
             >
-              {idx + 1}. {step.title.length > 24 ? step.title.slice(0, 24) + "…" : step.title}
+              <span>{idx + 1}. {step.title.length > 24 ? step.title.slice(0, 24) + "…" : step.title}</span>
+              {step.stepType === "PDF" && (
+                <span className={cn(
+                  "text-[9px] font-semibold px-1 py-0.5 rounded",
+                  activeStep.id === step.id ? "bg-white/25 text-white" : "bg-accent-soft text-accent-hover"
+                )}>PDF</span>
+              )}
             </button>
           ))}
         </div>
       )}
 
-      {/* Editor */}
-      <div className="border border-gray-200 rounded-lg overflow-hidden">
-        <EditorToolbar
-          editor={editor}
-          onImageUpload={() => fileInputRef.current?.click()}
+      {/* Editor or PDF upload, based on step type */}
+      {activeStep.stepType === "CONTENT" ? (
+        <>
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <EditorToolbar
+              editor={editor}
+              onImageUpload={() => fileInputRef.current?.click()}
+              uploading={uploading}
+            />
+            <EditorContent
+              editor={editor}
+              className="prose prose-sm max-w-none min-h-[300px] p-4 focus-within:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[280px]"
+            />
+          </div>
+          {dirty && (
+            <Button size="sm" loading={saving} onClick={saveContent}>
+              <Save className="h-3.5 w-3.5" />
+              Save Content
+            </Button>
+          )}
+        </>
+      ) : (
+        <PdfStepUploader
+          fileUrl={pdfContent?.fileUrl ?? null}
+          fileName={pdfContent?.fileName ?? null}
           uploading={uploading}
+          onUploadClick={() => pdfInputRef.current?.click()}
         />
-        <EditorContent
-          editor={editor}
-          className="prose prose-sm max-w-none min-h-[300px] p-4 focus-within:outline-none [&_.ProseMirror]:outline-none [&_.ProseMirror]:min-h-[280px]"
+      )}
+    </div>
+  );
+}
+
+// ─── PDF Step Uploader ────────────────────────────────────────────────────────
+
+function PdfStepUploader({
+  fileUrl,
+  fileName,
+  uploading,
+  onUploadClick,
+}: {
+  fileUrl: string | null;
+  fileName: string | null;
+  uploading: boolean;
+  onUploadClick: () => void;
+}) {
+  if (!fileUrl) {
+    return (
+      <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center bg-gray-50/50">
+        <div className="h-12 w-12 mx-auto rounded-full bg-accent-tint flex items-center justify-center mb-3">
+          <FileTextIcon className="h-6 w-6 text-accent" />
+        </div>
+        <p className="text-sm font-medium text-gray-700">No PDF uploaded yet</p>
+        <p className="text-xs text-gray-400 mt-1 mb-4">PDF SOP only — no other content shown to trainees.</p>
+        <Button size="sm" loading={uploading} onClick={onUploadClick}>
+          <Upload className="h-3.5 w-3.5" />
+          Upload PDF
+        </Button>
+        <p className="text-[10px] text-gray-400 mt-3">Max 16 MB · application/pdf</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="border border-gray-200 rounded-lg p-4 bg-white flex items-center gap-3">
+        <div className="h-10 w-10 rounded bg-accent-tint flex items-center justify-center flex-shrink-0">
+          <FileTextIcon className="h-5 w-5 text-accent" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-900 truncate">{fileName ?? "SOP.pdf"}</p>
+          <a
+            href={fileUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-accent hover:underline"
+          >
+            Open in new tab
+          </a>
+        </div>
+        <Button size="sm" variant="outline" loading={uploading} onClick={onUploadClick}>
+          <Upload className="h-3.5 w-3.5" />
+          Replace
+        </Button>
+      </div>
+      <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+        <iframe
+          src={fileUrl}
+          className="w-full h-[420px]"
+          title={fileName ?? "PDF preview"}
         />
       </div>
-
-      {dirty && (
-        <Button size="sm" loading={saving} onClick={saveContent}>
-          <Save className="h-3.5 w-3.5" />
-          Save Content
-        </Button>
-      )}
     </div>
   );
 }
@@ -568,6 +715,7 @@ export function AddStepButton({ topicId }: AddStepButtonProps) {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [title, setTitle] = React.useState("");
+  const [stepType, setStepType] = React.useState<StepType>("CONTENT");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -578,7 +726,7 @@ export function AddStepButton({ topicId }: AddStepButtonProps) {
       const res = await fetch("/api/steps", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ topicId, title: title.trim() }),
+        body: JSON.stringify({ topicId, title: title.trim(), stepType }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -587,6 +735,7 @@ export function AddStepButton({ topicId }: AddStepButtonProps) {
       toast("Step created", "success");
       setOpen(false);
       setTitle("");
+      setStepType("CONTENT");
       router.refresh();
     } catch (err) {
       toast(err instanceof Error ? err.message : "Something went wrong", "error");
@@ -605,12 +754,29 @@ export function AddStepButton({ topicId }: AddStepButtonProps) {
       <DialogContent size="sm">
         <DialogHeader>
           <DialogTitle>Add Step</DialogTitle>
-          <DialogDescription>Give this step a clear, descriptive title.</DialogDescription>
+          <DialogDescription>Choose what kind of step this is, then give it a title.</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-gray-600">Step Type</label>
+            <Select value={stepType} onValueChange={(v) => setStepType(v as StepType)}>
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="CONTENT">Content — rich text, video, images</SelectItem>
+                <SelectItem value="PDF">PDF SOP — upload a PDF file</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-gray-400">
+              {stepType === "CONTENT"
+                ? "Build the step with the rich-text editor (best for written SOPs and walkthroughs)."
+                : "Just upload a PDF. Trainees view the PDF in-page; no other content is shown."}
+            </p>
+          </div>
           <Input
             label="Step Title"
-            placeholder="e.g. Understanding PPE Requirements"
+            placeholder={stepType === "PDF" ? "e.g. Cabinet Cleaning SOP" : "e.g. Understanding PPE Requirements"}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             required
