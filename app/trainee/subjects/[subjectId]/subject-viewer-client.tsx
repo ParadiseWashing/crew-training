@@ -20,6 +20,9 @@ import {
   ScrollText,
   Play,
   Menu,
+  FileText as FileTextIcon,
+  X,
+  Maximize2,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -67,16 +70,20 @@ interface SubjectViewerClientProps {
 }
 
 // ─── PDF Step Renderer ────────────────────────────────────────────────────────
+// Shows a tappable card; opens a fullscreen in-page overlay (NOT a new tab) so
+// the trainee can read the SOP at full size, then close to return to the lesson.
 
 function PdfStepRenderer({
   fileUrl,
   fileName,
-  onLoaded,
+  onOpen,
 }: {
   fileUrl: string | null;
   fileName: string | null;
-  onLoaded: () => void;
+  onOpen: () => void;
 }) {
+  const [overlayOpen, setOverlayOpen] = React.useState(false);
+
   if (!fileUrl) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -85,22 +92,121 @@ function PdfStepRenderer({
       </div>
     );
   }
+
+  function open() {
+    onOpen(); // marks pdfOpened gate so Mark Complete can unlock
+    setOverlayOpen(true);
+  }
+
   return (
-    <div className="rounded-xl border border-gray-200 bg-gray-50 overflow-hidden">
-      <iframe
-        src={fileUrl}
-        title={fileName ?? "SOP PDF"}
-        onLoad={onLoaded}
-        className="w-full h-[75vh] block"
+    <>
+      {/* Tappable card */}
+      <button
+        type="button"
+        onClick={open}
+        className="group w-full text-left rounded-2xl border border-gray-200 bg-white hover:border-accent-soft hover:shadow-md transition-all p-5 flex items-center gap-4"
       >
-        <p className="p-4 text-sm text-gray-500">
-          Your browser cannot display this PDF.{" "}
-          <a href={fileUrl} className="text-accent underline" target="_blank" rel="noopener noreferrer">
-            Download the SOP
-          </a>
-          .
+        <div className="h-14 w-14 rounded-xl bg-accent-tint flex items-center justify-center flex-shrink-0">
+          <FileTextIcon className="h-7 w-7 text-accent" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-900 truncate">
+            {fileName ?? "SOP.pdf"}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+            <Maximize2 className="h-3 w-3" />
+            Tap to open SOP
+          </p>
+        </div>
+        <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-accent transition-colors flex-shrink-0" />
+      </button>
+
+      {/* Fullscreen overlay */}
+      {overlayOpen && (
+        <PdfOverlay
+          fileUrl={fileUrl}
+          fileName={fileName}
+          onClose={() => setOverlayOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function PdfOverlay({
+  fileUrl,
+  fileName,
+  onClose,
+}: {
+  fileUrl: string;
+  fileName: string | null;
+  onClose: () => void;
+}) {
+  // Escape key closes the overlay (desktop UX).
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // Lock page scroll while overlay is open.
+  React.useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={fileName ?? "SOP PDF"}
+      className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm flex flex-col"
+      onClick={(e) => {
+        // Click on the dark backdrop (outside the PDF) closes the overlay.
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      {/* Top bar with filename + close button. Safe-area aware for iOS notch. */}
+      <div
+        className="flex items-center gap-3 px-4 py-3 text-white"
+        style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <FileTextIcon className="h-4 w-4 text-white/70 flex-shrink-0" />
+        <p className="text-sm font-medium truncate flex-1">
+          {fileName ?? "SOP.pdf"}
         </p>
-      </iframe>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close PDF"
+          className="h-10 w-10 rounded-full bg-white/15 hover:bg-white/25 active:bg-white/35 transition-colors flex items-center justify-center flex-shrink-0"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      {/* PDF iframe takes the remaining space */}
+      <div
+        className="flex-1 px-2 pb-2 sm:px-4 sm:pb-4 min-h-0"
+        style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <iframe
+          src={fileUrl}
+          title={fileName ?? "SOP PDF"}
+          className="w-full h-full rounded-lg bg-white shadow-2xl block"
+        >
+          <p className="p-4 text-sm text-gray-500">
+            Your browser cannot display this PDF inline.
+          </p>
+        </iframe>
+      </div>
     </div>
   );
 }
@@ -1327,7 +1433,7 @@ export function SubjectViewerClient({
                       <PdfStepRenderer
                         fileUrl={pdfFileUrl}
                         fileName={pdfContent?.fileName ?? null}
-                        onLoaded={() => setPdfOpened(true)}
+                        onOpen={() => setPdfOpened(true)}
                       />
                     ) : (
                       <ContentRenderer content={activeStepContent} />
@@ -1354,7 +1460,7 @@ export function SubjectViewerClient({
                       </p>
                       <p className="text-xs text-amber-700">
                         {pdfFileUrl
-                          ? "Open the PDF above (give it a moment to load) before you can mark this step complete."
+                          ? "Tap the SOP card to open the PDF before you can mark this step complete."
                           : "No PDF has been uploaded for this step yet."}
                       </p>
                     </div>
