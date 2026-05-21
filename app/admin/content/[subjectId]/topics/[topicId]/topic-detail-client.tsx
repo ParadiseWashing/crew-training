@@ -45,6 +45,8 @@ import {
   GripVertical,
   FileText as FileTextIcon,
   Upload,
+  ChevronRight,
+  Maximize2,
 } from "lucide-react";
 import { genUploader } from "uploadthing/client";
 import type { OurFileRouter } from "@/lib/uploadthing";
@@ -653,6 +655,8 @@ function PdfStepUploader({
   uploading: boolean;
   onUploadClick: () => void;
 }) {
+  const [overlayOpen, setOverlayOpen] = React.useState(false);
+
   if (!fileUrl) {
     return (
       <div className="border-2 border-dashed border-gray-200 rounded-lg p-8 text-center bg-gray-50/50">
@@ -671,33 +675,114 @@ function PdfStepUploader({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="border border-gray-200 rounded-lg p-4 bg-white flex items-center gap-3">
-        <div className="h-10 w-10 rounded bg-accent-tint flex items-center justify-center flex-shrink-0">
-          <FileTextIcon className="h-5 w-5 text-accent" />
+    <div className="space-y-2">
+      {/* Tappable preview card — matches the trainee experience. */}
+      <button
+        type="button"
+        onClick={() => setOverlayOpen(true)}
+        className="group w-full text-left rounded-2xl border border-gray-200 bg-white hover:border-accent-soft hover:shadow-md transition-all p-5 flex items-center gap-4"
+      >
+        <div className="h-14 w-14 rounded-xl bg-accent-tint flex items-center justify-center flex-shrink-0">
+          <FileTextIcon className="h-7 w-7 text-accent" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 truncate">{fileName ?? "SOP.pdf"}</p>
-          <a
-            href={fileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-xs text-accent hover:underline"
-          >
-            Open in new tab
-          </a>
+          <p className="text-sm font-semibold text-gray-900 truncate">
+            {fileName ?? "SOP.pdf"}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+            <Maximize2 className="h-3 w-3" />
+            Tap to open SOP
+          </p>
         </div>
+        <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-accent transition-colors flex-shrink-0" />
+      </button>
+
+      {/* Admin-only Replace control — sits below the card. */}
+      <div className="flex justify-end">
         <Button size="sm" variant="outline" loading={uploading} onClick={onUploadClick}>
           <Upload className="h-3.5 w-3.5" />
-          Replace
+          Replace PDF
         </Button>
       </div>
-      <div className="border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+
+      {overlayOpen && (
+        <AdminPdfOverlay
+          fileUrl={fileUrl}
+          fileName={fileName}
+          onClose={() => setOverlayOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function AdminPdfOverlay({
+  fileUrl,
+  fileName,
+  onClose,
+}: {
+  fileUrl: string;
+  fileName: string | null;
+  onClose: () => void;
+}) {
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  React.useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={fileName ?? "SOP PDF"}
+      className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm flex flex-col"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="flex items-center gap-3 px-4 py-3 text-white"
+        style={{ paddingTop: "max(0.75rem, env(safe-area-inset-top))" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <FileTextIcon className="h-4 w-4 text-white/70 flex-shrink-0" />
+        <p className="text-sm font-medium truncate flex-1">
+          {fileName ?? "SOP.pdf"}
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close PDF"
+          className="h-10 w-10 rounded-full bg-white/15 hover:bg-white/25 active:bg-white/35 transition-colors flex items-center justify-center flex-shrink-0"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+      <div
+        className="flex-1 px-2 pb-2 sm:px-4 sm:pb-4 min-h-0"
+        style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
+        onClick={(e) => e.stopPropagation()}
+      >
         <iframe
           src={fileUrl}
-          className="w-full h-[420px]"
-          title={fileName ?? "PDF preview"}
-        />
+          title={fileName ?? "SOP PDF"}
+          className="w-full h-full rounded-lg bg-white shadow-2xl block"
+        >
+          <p className="p-4 text-sm text-gray-500">
+            Your browser cannot display this PDF inline.
+          </p>
+        </iframe>
       </div>
     </div>
   );

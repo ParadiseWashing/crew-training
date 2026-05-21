@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/toast";
-import { Plus, BookOpen } from "lucide-react";
+import { Plus, BookOpen, RotateCcw } from "lucide-react";
 
 interface SubjectSummary {
   id: string;
@@ -159,6 +159,94 @@ export function AssignSubjectButton({
               Assign {selected.length > 0 ? `(${selected.length})` : ""}
             </Button>
           )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Reset Progress Button ────────────────────────────────────────────────────
+
+interface ResetProgressButtonProps {
+  userId: string;
+  userName: string;
+  subjectId: string;
+  subjectTitle: string;
+}
+
+export function ResetProgressButton({
+  userId,
+  userName,
+  subjectId,
+  subjectTitle,
+}: ResetProgressButtonProps) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [open, setOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+
+  async function handleReset() {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `/api/admin/users/${userId}/subjects/${subjectId}/reset-progress`,
+        { method: "POST" }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Failed to reset progress");
+      }
+      toast(`Progress reset for ${subjectTitle}`, "success");
+      setOpen(false);
+      router.refresh();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Something went wrong", "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline" className="text-gray-600 hover:text-red-600 hover:border-red-200">
+          <RotateCcw className="h-3.5 w-3.5" />
+          Reset Progress
+        </Button>
+      </DialogTrigger>
+      <DialogContent size="sm">
+        <DialogHeader>
+          <DialogTitle>Reset progress?</DialogTitle>
+          <DialogDescription asChild>
+            <div className="space-y-3 text-sm text-gray-600">
+              <p>
+                This will completely reset{" "}
+                <span className="font-semibold text-gray-900">{userName}</span>&rsquo;s
+                progress in{" "}
+                <span className="font-semibold text-gray-900">{subjectTitle}</span>:
+              </p>
+              <ul className="list-disc pl-5 space-y-1 text-xs text-gray-500">
+                <li>All completed steps will be marked incomplete</li>
+                <li>All quiz attempts for this subject will be erased</li>
+                <li>Any sign-off for this subject will be removed</li>
+                <li>The assignment will return to &ldquo;Not Started&rdquo;</li>
+              </ul>
+              <p className="text-xs text-red-600 font-medium">
+                This cannot be undone.
+              </p>
+            </div>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="outline">
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button variant="destructive" loading={loading} onClick={handleReset}>
+            <RotateCcw className="h-3.5 w-3.5" />
+            Reset Progress
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -6,12 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
-import { Users, BookOpen, TrendingUp, ClipboardList, Award } from "lucide-react";
+import { Users, BookOpen, TrendingUp, ClipboardList, Award, ClipboardCheck, ChevronRight } from "lucide-react";
+import Link from "next/link";
 
 export default async function ReportsPage() {
   await auth();
 
-  const [users, subjects, assignments, quizAttempts] = await Promise.all([
+  const [
+    users,
+    subjects,
+    assignments,
+    quizAttempts,
+    workingInterviewCounts,
+  ] = await Promise.all([
     prisma.user.findMany({
       where: { systemRole: "TRAINEE" },
       include: {
@@ -53,7 +60,18 @@ export default async function ReportsPage() {
       },
       orderBy: { takenAt: "desc" },
     }),
+    prisma.workingInterview.groupBy({
+      by: ["status"],
+      _count: { _all: true },
+    }),
   ]);
+
+  const wiCounts = {
+    inProgress: workingInterviewCounts.find((c) => c.status === "IN_PROGRESS")?._count._all ?? 0,
+    passed: workingInterviewCounts.find((c) => c.status === "PASSED")?._count._all ?? 0,
+    disqualified: workingInterviewCounts.find((c) => c.status === "DISQUALIFIED")?._count._all ?? 0,
+  };
+  const wiTotal = wiCounts.inProgress + wiCounts.passed + wiCounts.disqualified;
 
   // ── Summary stats ──────────────────────────────────────────────────────────
   const totalTrainees = users.length;
@@ -197,6 +215,28 @@ export default async function ReportsPage() {
           color="green"
         />
       </div>
+
+      {/* Working Interviews link card */}
+      <Link href="/admin/reports/working-interviews" className="block group mb-8">
+        <Card className="hover:border-accent-soft hover:shadow-md transition-all">
+          <CardContent className="p-5 flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-accent-tint flex items-center justify-center flex-shrink-0">
+              <ClipboardCheck className="h-6 w-6 text-accent" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-base font-semibold text-gray-900 group-hover:text-accent transition-colors">
+                Working Interviews
+              </p>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {wiTotal === 0
+                  ? "No working interviews yet."
+                  : `${wiTotal} total — ${wiCounts.inProgress} in progress, ${wiCounts.passed} passed, ${wiCounts.disqualified} DQ`}
+              </p>
+            </div>
+            <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-accent transition-colors flex-shrink-0" />
+          </CardContent>
+        </Card>
+      </Link>
 
       <div className="space-y-8">
         {/* ── Per-Subject Completion Table ── */}

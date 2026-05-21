@@ -4,7 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BookOpen, Users, BarChart3, Settings,
-  GraduationCap, TrendingUp, Building2, Menu, X, LogOut, ChevronRight, AlertTriangle
+  GraduationCap, TrendingUp, Building2, Menu, X, LogOut, ChevronRight, AlertTriangle,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
@@ -31,15 +32,27 @@ const traineeNav: NavItem[] = [
   { label: "Directory", href: "/trainee/directory", icon: <Building2 className="h-5 w-5" /> },
 ];
 
+const leadershipNavItem: NavItem = {
+  label: "Leadership",
+  href: "/trainee/leadership",
+  icon: <ShieldCheck className="h-5 w-5" />,
+};
+
 interface SidebarProps {
   user: { name: string; email: string; image?: string | null; systemRole: string };
+  /** True when the user's JobRole has canAccessLeadership=true OR they are an admin. */
+  canAccessLeadership?: boolean;
 }
 
-export function Sidebar({ user }: SidebarProps) {
+export function Sidebar({ user, canAccessLeadership = false }: SidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const isAdmin = user.systemRole === "ADMIN";
-  const navItems = isAdmin ? adminNav : traineeNav;
+  const navItems = isAdmin
+    ? adminNav
+    : canAccessLeadership
+      ? [...traineeNav, leadershipNavItem]
+      : traineeNav;
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-[#FFFFFF]">

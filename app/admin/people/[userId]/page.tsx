@@ -18,7 +18,7 @@ import {
   ArrowLeft,
   ShieldCheck,
 } from "lucide-react";
-import { AssignSubjectButton } from "./user-detail-client";
+import { AssignSubjectButton, ResetProgressButton } from "./user-detail-client";
 
 export default async function UserDetailPage({
   params,
@@ -278,13 +278,21 @@ export default async function UserDetailPage({
                               ` · Completed ${formatDate(assignment.completedAt)}`}
                           </p>
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-2xl font-bold text-gray-900">
-                            {Math.round(assignment.progressPercentage)}%
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {completedSteps}/{totalSteps} steps
-                          </p>
+                        <div className="text-right flex-shrink-0 flex flex-col items-end gap-2">
+                          <div>
+                            <p className="text-2xl font-bold text-gray-900">
+                              {Math.round(assignment.progressPercentage)}%
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {completedSteps}/{totalSteps} steps
+                            </p>
+                          </div>
+                          <ResetProgressButton
+                            userId={user.id}
+                            userName={user.name}
+                            subjectId={subject.id}
+                            subjectTitle={subject.title}
+                          />
                         </div>
                       </div>
                       <Progress

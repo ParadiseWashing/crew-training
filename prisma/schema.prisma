@@ -65,6 +65,8 @@ model User {
   signOffs      SignOff[]
   stepProgress  StepProgress[]
   auditFlags    TrainingAuditFlag[]
+  startedInterviews WorkingInterview[]    @relation("StartedInterviews")
+  evaluatedDays     WorkingInterviewDay[] @relation("EvaluatedDays")
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -80,13 +82,14 @@ enum InviteStatus {
 }
 
 model JobRole {
-  id          String           @id @default(cuid())
-  title       String
-  description String?
-  color       String?          @default("#3B82F6")
-  users       User[]
-  subjects    JobRoleSubject[]
-  createdAt   DateTime         @default(now())
+  id                    String           @id @default(cuid())
+  title                 String
+  description           String?
+  color                 String?          @default("#3B82F6")
+  canAccessLeadership   Boolean          @default(false)
+  users                 User[]
+  subjects              JobRoleSubject[]
+  createdAt             DateTime         @default(now())
 }
 
 model Subject {
@@ -110,6 +113,7 @@ enum SubjectCategory {
   COMPANY
   POLICIES
   PROCESSES
+  LEADERSHIP
 }
 
 model JobRoleSubject {
@@ -259,4 +263,46 @@ model SignOff {
   subject    Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   signedName String
   signedAt   DateTime @default(now())
+}
+
+// ─── Working Interviews (Leadership) ──────────────────────────────────────────
+
+model WorkingInterview {
+  id            String                  @id @default(cuid())
+  candidateName String
+  status        WorkingInterviewStatus  @default(IN_PROGRESS)
+  startedById   String
+  startedBy     User                    @relation("StartedInterviews", fields: [startedById], references: [id])
+  startedAt     DateTime                @default(now())
+  completedAt   DateTime?
+  days          WorkingInterviewDay[]
+}
+
+enum WorkingInterviewStatus {
+  IN_PROGRESS
+  PASSED
+  DISQUALIFIED
+}
+
+model WorkingInterviewDay {
+  id            String                @id @default(cuid())
+  interviewId   String
+  interview     WorkingInterview      @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  day           Int                   // 1, 2, or 3
+  evaluatorId   String
+  evaluator     User                  @relation("EvaluatedDays", fields: [evaluatorId], references: [id])
+  ratings       Json                  // { taskRatings: {...}, observations: {...}, dayThreeFields: {...} }
+  autoDqFlags   Json                  // string[] of triggered flag codes
+  notes         String?
+  decision      WorkingInterviewDecision
+  submittedAt   DateTime              @default(now())
+
+  @@unique([interviewId, day])
+}
+
+enum WorkingInterviewDecision {
+  CONTINUE
+  DQ
+  HIRE
+  DO_NOT_HIRE
 }
