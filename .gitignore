@@ -44,3 +44,6 @@ next-env.d.ts
 
 # Prisma generated client
 /generated
+
+# Local dev/admin scripts (DB-touching, not for prod)
+/scripts

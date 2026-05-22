@@ -22,6 +22,8 @@ import {
   RETENTION_OPTIONS,
   PRODUCTION_SPEED_OPTIONS,
   QUALITY_AT_SPEED_OPTIONS,
+  NONE_OF_ABOVE_CODE,
+  hasRealDqFlag,
   decisionOptionsForDay,
   forcedDecisionForDay,
   type RatingScale,
@@ -242,7 +244,6 @@ function DayForm({
   const [observations, setObservations] = React.useState<Record<string, RatingScale | "">>({});
   // Day 3-only
   const [ownerVisitConfirmed, setOwnerVisitConfirmed] = React.useState<boolean | null>(null);
-  const [ownerVisitTime, setOwnerVisitTime] = React.useState("");
   const [productionSpeed, setProductionSpeed] = React.useState<string>("");
   const [qualityAtSpeed, setQualityAtSpeed] = React.useState<string>("");
   // Day 2-only
@@ -251,24 +252,89 @@ function DayForm({
   const [notes, setNotes] = React.useState("");
   const [decision, setDecision] = React.useState<"CONTINUE" | "DQ" | "HIRE" | "DO_NOT_HIRE" | "">("");
 
-  // If any auto-DQ flag is checked, decision is forced.
-  const forcedDecision = autoDqFlags.length > 0 ? forcedDecisionForDay(day) : null;
+  // Decision is forced to DQ only when a REAL disqualifier is checked.
+  // "None of the above" never forces DQ.
+  const realDqChecked = hasRealDqFlag(autoDqFlags);
+  const forcedDecision = realDqChecked ? forcedDecisionForDay(day) : null;
   const effectiveDecision = forcedDecision ?? decision;
 
+  /**
+   * Toggling auto-DQ flags has mutex behavior:
+   * - Selecting any of the 7 DQ flags clears NONE_OF_ABOVE.
+   * - Selecting NONE_OF_ABOVE clears all DQ flags.
+   * That way the section always represents a coherent answer.
+   */
   function toggleFlag(code: string) {
-    setAutoDqFlags((prev) =>
-      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
-    );
+    setAutoDqFlags((prev) => {
+      const already = prev.includes(code);
+      if (code === NONE_OF_ABOVE_CODE) {
+        // Toggling NONE → either select only NONE, or clear everything.
+        return already ? [] : [NONE_OF_ABOVE_CODE];
+      }
+      // Toggling a real DQ flag → also drop NONE if it was set.
+      const withoutNone = prev.filter((c) => c !== NONE_OF_ABOVE_CODE);
+      return already ? withoutNone.filter((c) => c !== code) : [...withoutNone, code];
+    });
+    // Clear a previously chosen "Continue" decision if a real DQ flag becomes checked,
+    // since the UI will lock it to DQ anyway.
+    if (code !== NONE_OF_ABOVE_CODE && decision && ["CONTINUE", "HIRE"].includes(decision)) {
+      setDecision("");
+    }
   }
 
   const tasks = day === 1 ? DAY_1_TASKS : day === 2 ? DAY_2_TASKS : [];
   const taskScale = day === 2 ? RETENTION_OPTIONS : RATING_OPTIONS;
   const taskScaleLabel = day === 2 ? "Re-teach needed?" : "Performance";
 
+  /** Returns a list of human-readable missing field names. Empty = ready to submit. */
+  function missingFields(): string[] {
+    const missing: string[] = [];
+
+    if (autoDqFlags.length === 0) {
+      missing.push("Automatic disqualifiers (pick at least one, or \"None of the above\")");
+    }
+
+    if (day === 1 || day === 2) {
+      for (const task of DAY_1_TASKS) {
+        if (!taskRatings[task.id]) {
+          missing.push(`Task — ${task.label}`);
+        }
+      }
+    }
+
+    if (day === 2 && !paceAtSpeed) {
+      missing.push("Pace & quality at speed");
+    }
+
+    if (day === 3) {
+      if (ownerVisitConfirmed === null) missing.push("Owner site visit");
+      if (!productionSpeed) missing.push("Production speed");
+      if (!qualityAtSpeed) missing.push("Quality at speed");
+    }
+
+    for (const obs of OBSERVATIONS) {
+      if (!observations[obs.id]) {
+        missing.push(`Observation — ${obs.label}`);
+      }
+    }
+
+    if (!effectiveDecision) {
+      missing.push(day === 3 ? "Final recommendation" : "End-of-day verdict");
+    }
+
+    return missing;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!effectiveDecision) {
-      toast("Please choose a decision", "error");
+
+    const missing = missingFields();
+    if (missing.length > 0) {
+      const msg =
+        missing.length === 1
+          ? `Please complete: ${missing[0]}`
+          : `${missing.length} required fields are still empty. First: ${missing[0]}`;
+      toast(msg, "error");
       return;
     }
 
@@ -279,7 +345,6 @@ function DayForm({
     if (day === 2) ratings.paceAtSpeed = paceAtSpeed;
     if (day === 3) {
       ratings.ownerVisitConfirmed = ownerVisitConfirmed;
-      ratings.ownerVisitTime = ownerVisitTime;
       ratings.productionSpeed = productionSpeed;
       ratings.qualityAtSpeed = qualityAtSpeed;
     }
@@ -316,7 +381,12 @@ function DayForm({
       </p>
 
       {/* Auto-DQ flags */}
-      <FormSection title="Automatic disqualifiers" subtitle="Check any that apply. ANY checked = DQ.">
+      <FormSection
+        title="Automatic disqualifiers"
+        subtitle={
+          'Pick "None of the above" if nothing happened today. Any other selection = automatic DQ.'
+        }
+      >
         <div className="space-y-1.5">
           {AUTO_DQ_FLAGS.map((flag) => {
             const checked = autoDqFlags.includes(flag.code);
@@ -342,6 +412,36 @@ function DayForm({
               </label>
             );
           })}
+
+          {/* "None of the above" — the only safe option. Mutex with the 7 above. */}
+          {(() => {
+            const noneChecked = autoDqFlags.includes(NONE_OF_ABOVE_CODE);
+            return (
+              <label
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-colors mt-2",
+                  noneChecked
+                    ? "border-emerald-300 bg-emerald-50"
+                    : "border-gray-200 hover:bg-gray-50"
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={noneChecked}
+                  onChange={() => toggleFlag(NONE_OF_ABOVE_CODE)}
+                  className="h-4 w-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300"
+                />
+                <span
+                  className={cn(
+                    "text-sm",
+                    noneChecked ? "text-emerald-900 font-medium" : "text-gray-700"
+                  )}
+                >
+                  None of the above
+                </span>
+              </label>
+            );
+          })()}
         </div>
       </FormSection>
 
@@ -400,15 +500,6 @@ function DayForm({
                 </button>
               ))}
             </div>
-            {ownerVisitConfirmed === true && (
-              <input
-                type="text"
-                value={ownerVisitTime}
-                onChange={(e) => setOwnerVisitTime(e.target.value)}
-                placeholder="What time? (e.g. 10:30am)"
-                className="mt-2 w-full max-w-xs rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
-              />
-            )}
           </FormSection>
 
           <FormSection title="Production speed">
@@ -574,15 +665,21 @@ function SubmittedSummary({ submission, day }: { submission: DayReport; day: num
     ? "bg-emerald-100 text-emerald-700"
     : "bg-red-100 text-red-700";
 
+  // Count ONLY real DQ triggers — "None of the above" is the safe answer and
+  // shouldn't appear as a triggered flag.
+  const realDqFlagCount = submission.autoDqFlags.filter(
+    (c) => c !== NONE_OF_ABOVE_CODE
+  ).length;
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${decisionTone}`}>
           {decisionLabel(submission.decision)}
         </span>
-        {submission.autoDqFlags.length > 0 && (
+        {realDqFlagCount > 0 && (
           <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">
-            {submission.autoDqFlags.length} auto-DQ flag{submission.autoDqFlags.length === 1 ? "" : "s"}
+            {realDqFlagCount} auto-DQ flag{realDqFlagCount === 1 ? "" : "s"}
           </span>
         )}
       </div>

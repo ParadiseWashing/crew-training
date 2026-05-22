@@ -12,7 +12,9 @@ import {
   PRODUCTION_SPEED_OPTIONS,
   QUALITY_AT_SPEED_OPTIONS,
   STATUS_LABELS,
+  NONE_OF_ABOVE_CODE,
 } from "@/lib/working-interview";
+import { DeleteInterviewButton } from "./delete-interview-client";
 
 export const dynamic = "force-dynamic";
 
@@ -94,6 +96,13 @@ export default async function AdminInterviewDetailPage({
         }
         title={interview.candidateName}
         description={`Started ${new Date(interview.startedAt).toLocaleDateString()} by ${interview.startedBy.name}`}
+        actions={
+          <DeleteInterviewButton
+            interviewId={interview.id}
+            candidateName={interview.candidateName}
+            dayCount={interview.days.length}
+          />
+        }
       />
       <div className="mb-6 -mt-2">
         <span
@@ -119,9 +128,11 @@ export default async function AdminInterviewDetailPage({
           const tasks = (ratings.tasks as Record<string, string>) ?? {};
           const obs = (ratings.observations as Record<string, string>) ?? {};
           const flagCodes: string[] = Array.isArray(d.autoDqFlags) ? (d.autoDqFlags as string[]) : [];
-          const flags: string[] = flagCodes.map(
-            (code) => AUTO_DQ_FLAGS.find((f) => f.code === code)?.label ?? code
-          );
+          // Don't surface NONE_OF_ABOVE in the "Auto-DQ Flags Triggered" warning —
+          // it's the safe-answer code, not a triggered disqualifier.
+          const flags: string[] = flagCodes
+            .filter((code) => code !== NONE_OF_ABOVE_CODE)
+            .map((code) => AUTO_DQ_FLAGS.find((f) => f.code === code)?.label ?? code);
           const decisionTone = ["CONTINUE", "HIRE"].includes(d.decision)
             ? "bg-emerald-100 text-emerald-700"
             : "bg-red-100 text-red-700";
@@ -199,7 +210,7 @@ export default async function AdminInterviewDetailPage({
                       <p className="text-[11px] text-gray-500">Owner site visit</p>
                       <p className="text-sm font-semibold text-gray-900 mt-0.5">
                         {ratings.ownerVisitConfirmed === true
-                          ? `Confirmed${ratings.ownerVisitTime ? ` (${String(ratings.ownerVisitTime)})` : ""}`
+                          ? "Confirmed"
                           : ratings.ownerVisitConfirmed === false
                             ? "Did not happen"
                             : "—"}

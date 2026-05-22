@@ -30,6 +30,19 @@ export const AUTO_DQ_FLAGS = [
 
 export type AutoDqCode = (typeof AUTO_DQ_FLAGS)[number]["code"];
 
+// Special "no DQ triggers occurred" code. Selecting this is required to advance.
+// Mutually exclusive with the 7 real DQ flags in the UI.
+export const NONE_OF_ABOVE_CODE = "NONE_OF_ABOVE";
+
+/**
+ * Returns true if the array of selected flag codes includes any real DQ trigger
+ * (i.e. anything other than NONE_OF_ABOVE). Used by both client and server to
+ * decide whether a DQ decision is forced.
+ */
+export function hasRealDqFlag(codes: string[]): boolean {
+  return codes.some((c) => c !== NONE_OF_ABOVE_CODE);
+}
+
 // Day 1 — Taught. Tasks taught & executed under direct supervision.
 export const DAY_1_TASKS = [
   { id: "vacuum", label: "Vacuum cabinets & shelves" },
@@ -44,7 +57,7 @@ export const DAY_2_TASKS = DAY_1_TASKS;
 export const OBSERVATIONS = [
   { id: "punctuality", label: "Punctuality / arrival" },
   { id: "coaching", label: "Receptive to coaching" },
-  { id: "safety_ppe", label: "Safety & PPE compliance" },
+  { id: "safety_ppe", label: "Uniform, Safety, & PPE compliance" },
   { id: "effort", label: "Effort & pace" },
 ];
 

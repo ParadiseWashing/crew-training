@@ -17,6 +17,7 @@ import {
   EditJobRoleButton,
   DeleteJobRoleButton,
   SendInvitesButton,
+  SendIndividualInviteButton,
 } from "./people-client";
 
 export default async function PeoplePage() {
@@ -205,6 +206,9 @@ export default async function PeoplePage() {
                                 />
                               </svg>
                             </Link>
+                            {user.inviteStatus === "PENDING" && user.inviteToken && (
+                              <SendIndividualInviteButton userId={user.id} userName={user.name} />
+                            )}
                             <EditUserButton user={user} jobRoles={jobRoles} />
                             <DeleteUserButton userId={user.id} userName={user.name} />
                           </div>

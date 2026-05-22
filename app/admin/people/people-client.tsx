@@ -733,6 +733,65 @@ export function DeleteJobRoleButton({ roleId, roleTitle }: { roleId: string; rol
   );
 }
 
+// ─── SendIndividualInviteButton ────────────────────────────────────────────────
+//
+// Tiny icon button placed on each pending-invite row in the Employees table so
+// the admin can fire one invite email without opening the bulk-invites dialog.
+
+export function SendIndividualInviteButton({
+  userId,
+  userName,
+}: {
+  userId: string;
+  userName: string;
+}) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [loading, setLoading] = React.useState(false);
+
+  async function handleSend() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/invites/send/${userId}`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to send invite");
+
+      if (data.emailEnabled && data.sent) {
+        toast(`Invite emailed to ${userName}`, "success");
+      } else if (!data.emailEnabled) {
+        toast(
+          "Email sending is currently disabled. Use 'Invites' to copy the link manually.",
+          "warning"
+        );
+      } else {
+        toast(`Could not send invite to ${userName}`, "error");
+      }
+      router.refresh();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Something went wrong", "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleSend}
+      disabled={loading}
+      title={`Send invite email to ${userName}`}
+      aria-label={`Send invite email to ${userName}`}
+      className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-accent hover:bg-accent-tint transition-colors disabled:opacity-50"
+    >
+      {loading ? (
+        <span className="h-3.5 w-3.5 rounded-full border-2 border-gray-300 border-t-accent animate-spin" />
+      ) : (
+        <Send className="h-3.5 w-3.5" />
+      )}
+    </button>
+  );
+}
+
 // ─── SendInvitesButton ─────────────────────────────────────────────────────────
 //
 // Lists pending-invite employees and lets the admin either copy each invite

@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  AUTO_DQ_FLAGS,
+  DAY_1_TASKS,
+  OBSERVATIONS,
+  NONE_OF_ABOVE_CODE,
+  hasRealDqFlag,
+} from "@/lib/working-interview";
 
 async function requireLeadershipAccess() {
   const session = await auth();
@@ -72,10 +79,57 @@ export async function POST(
     return NextResponse.json({ error: `Decision must be one of ${validForDay.join(" / ")}` }, { status: 400 });
   }
 
-  // Enforce auto-DQ rule on the server side too: any flag → must be DQ/DO_NOT_HIRE.
-  const flagsArray: string[] = Array.isArray(autoDqFlags) ? autoDqFlags.filter((f) => typeof f === "string") : [];
-  if (flagsArray.length > 0 && PASS_DECISIONS.has(decision)) {
+  // ─── Auto-DQ section validation ─────────────────────────────────────────────
+  // Crew lead must either confirm "None of the above" or select at least one
+  // real DQ flag. Real DQ flag (anything other than NONE_OF_ABOVE) forces DQ.
+  const validFlagCodes = new Set<string>([
+    ...AUTO_DQ_FLAGS.map((f) => f.code),
+    NONE_OF_ABOVE_CODE,
+  ]);
+  const flagsArray: string[] = Array.isArray(autoDqFlags)
+    ? autoDqFlags.filter((f): f is string => typeof f === "string" && validFlagCodes.has(f))
+    : [];
+  if (flagsArray.length === 0) {
+    return NextResponse.json(
+      { error: "Auto-DQ section requires a selection (or \"None of the above\")" },
+      { status: 400 }
+    );
+  }
+  if (hasRealDqFlag(flagsArray) && PASS_DECISIONS.has(decision)) {
     return NextResponse.json({ error: "Auto-DQ flags require a DQ decision" }, { status: 400 });
+  }
+
+  // ─── Required-field validation (matches the client) ────────────────────────
+  const ratingsObj = (ratings && typeof ratings === "object") ? (ratings as Record<string, unknown>) : {};
+  const tasks = (ratingsObj.tasks && typeof ratingsObj.tasks === "object") ? (ratingsObj.tasks as Record<string, string>) : {};
+  const obs = (ratingsObj.observations && typeof ratingsObj.observations === "object") ? (ratingsObj.observations as Record<string, string>) : {};
+
+  const isNonEmpty = (v: unknown): v is string => typeof v === "string" && v.length > 0;
+
+  const missing: string[] = [];
+
+  if (day === 1 || day === 2) {
+    for (const task of DAY_1_TASKS) {
+      if (!isNonEmpty(tasks[task.id])) missing.push(`task:${task.id}`);
+    }
+  }
+  if (day === 2 && !isNonEmpty(ratingsObj.paceAtSpeed as string | undefined)) {
+    missing.push("paceAtSpeed");
+  }
+  if (day === 3) {
+    if (typeof ratingsObj.ownerVisitConfirmed !== "boolean") missing.push("ownerVisitConfirmed");
+    if (!isNonEmpty(ratingsObj.productionSpeed as string | undefined)) missing.push("productionSpeed");
+    if (!isNonEmpty(ratingsObj.qualityAtSpeed as string | undefined)) missing.push("qualityAtSpeed");
+  }
+  for (const o of OBSERVATIONS) {
+    if (!isNonEmpty(obs[o.id])) missing.push(`obs:${o.id}`);
+  }
+
+  if (missing.length > 0) {
+    return NextResponse.json(
+      { error: "Required fields missing", missing },
+      { status: 400 }
+    );
   }
 
   const result = await prisma.$transaction(async (tx) => {

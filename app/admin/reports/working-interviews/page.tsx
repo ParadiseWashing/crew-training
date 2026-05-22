@@ -6,6 +6,7 @@ import { PageHeader, Breadcrumb } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClipboardCheck, ChevronRight, ArrowRight } from "lucide-react";
 import { STATUS_LABELS } from "@/lib/working-interview";
+import { DeleteInterviewButton } from "./[interviewId]/delete-interview-client";
 
 export const dynamic = "force-dynamic";
 
@@ -102,12 +103,14 @@ function Section({
           {interviews.map((interview) => {
             const status = STATUS_LABELS[interview.status as keyof typeof STATUS_LABELS] ?? STATUS_LABELS.IN_PROGRESS;
             return (
-              <Link
+              <div
                 key={interview.id}
-                href={`/admin/reports/working-interviews/${interview.id}`}
-                className="block group"
+                className="group flex items-center gap-2 pr-3 hover:bg-gray-50 transition-colors"
               >
-                <div className="p-4 hover:bg-gray-50 transition-colors flex items-center gap-3">
+                <Link
+                  href={`/admin/reports/working-interviews/${interview.id}`}
+                  className="flex-1 min-w-0 p-4 flex items-center gap-3"
+                >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-accent transition-colors">
@@ -146,8 +149,16 @@ function Section({
                   </div>
 
                   <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-accent transition-colors flex-shrink-0" />
-                </div>
-              </Link>
+                </Link>
+
+                <DeleteInterviewButton
+                  interviewId={interview.id}
+                  candidateName={interview.candidateName}
+                  dayCount={interview.days.length}
+                  compact
+                  redirectToList={false}
+                />
+              </div>
             );
           })}
         </CardContent>

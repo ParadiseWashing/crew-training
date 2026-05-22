@@ -1,23 +1,34 @@
 // ─── Email Sender ─────────────────────────────────────────────────────────────
 //
-// Provider-agnostic stub. Currently a NO-OP — emails are NOT actually sent.
-// When ready to release, wire up a provider (Resend recommended) below.
-//
-// Resend example (uncomment + add RESEND_API_KEY to env):
-//
-//   import { Resend } from "resend";
-//   const resend = new Resend(process.env.RESEND_API_KEY);
-//   await resend.emails.send({
-//     from: "Paradise Washing <noreply@paradisewashing.com>",
-//     to: input.to,
-//     subject: input.subject,
-//     html: input.html,
-//     text: input.text,
-//   });
+// Gmail SMTP via nodemailer. Requires a Google App Password (16-char) tied to
+// a 2FA-enabled Workspace/Gmail account. Set EMAIL_ENABLED=true to send.
 
+import nodemailer, { type Transporter } from "nodemailer";
 import { buildInviteEmail, type InviteEmailData } from "./email-templates";
 
 const EMAIL_ENABLED = process.env.EMAIL_ENABLED === "true";
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, "");
+const EMAIL_FROM = process.env.EMAIL_FROM || GMAIL_USER || "";
+
+let transporter: Transporter | null = null;
+
+function getTransporter(): Transporter | null {
+  if (!EMAIL_ENABLED) return null;
+  if (!GMAIL_USER || !GMAIL_APP_PASSWORD) {
+    console.warn("[email] EMAIL_ENABLED=true but GMAIL_USER / GMAIL_APP_PASSWORD not set");
+    return null;
+  }
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 465,
+      secure: true,
+      auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
+    });
+  }
+  return transporter;
+}
 
 interface SendEmailInput {
   to: string;
@@ -32,9 +43,26 @@ async function sendEmail(input: SendEmailInput): Promise<{ sent: boolean; reason
     return { sent: false, reason: "EMAIL_ENABLED is false" };
   }
 
-  // TODO: wire up provider here (Resend, SendGrid, Postmark, etc.)
-  console.log(`[email:not-implemented] Email enabled but no provider configured: ${input.to}`);
-  return { sent: false, reason: "No email provider configured" };
+  const tx = getTransporter();
+  if (!tx) {
+    return { sent: false, reason: "SMTP not configured" };
+  }
+
+  try {
+    const info = await tx.sendMail({
+      from: `Paradise Academy <${EMAIL_FROM}>`,
+      to: input.to,
+      subject: input.subject,
+      text: input.text,
+      html: input.html,
+    });
+    console.log(`[email:sent] ${input.to} (messageId=${info.messageId})`);
+    return { sent: true };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[email:error] ${input.to}: ${msg}`);
+    return { sent: false, reason: msg };
+  }
 }
 
 export async function sendInviteEmail(data: InviteEmailData) {
