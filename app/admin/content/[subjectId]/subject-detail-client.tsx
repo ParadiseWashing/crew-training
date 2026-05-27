@@ -1,10 +1,38 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, Globe, EyeOff, Upload, X } from "lucide-react";
+import {
+  Plus,
+  Trash2,
+  Globe,
+  EyeOff,
+  Upload,
+  X,
+  GripVertical,
+  FileText,
+  HelpCircle,
+  ChevronRight,
+} from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { uploadFiles } from "@/lib/uploadthing-client";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input, Textarea } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -444,5 +472,224 @@ export function EditSubjectForm({ subject, allJobRoles }: EditSubjectFormProps) 
         </Button>
       )}
     </form>
+  );
+}
+
+// ─── Sortable Topic List ──────────────────────────────────────────────────────
+
+export interface TopicListItem {
+  id: string;
+  title: string;
+  weekNumber: number | null;
+  dayNumber: number | null;
+  stepCount: number;
+  quiz: { id: string; passingScore: number } | null;
+}
+
+function SortableTopicRow({
+  topic,
+  idx,
+  subjectId,
+}: {
+  topic: TopicListItem;
+  idx: number;
+  subjectId: string;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id: topic.id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(isDragging ? "z-50 opacity-60" : "")}
+    >
+      <Card
+        className={cn(
+          "group hover:shadow-sm transition-shadow",
+          isDragging && "border-accent-soft shadow-lg"
+        )}
+      >
+        <div className="flex items-center gap-3 px-4 py-3">
+          <button
+            type="button"
+            className="touch-none cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 flex-shrink-0"
+            aria-label="Drag to reorder"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+
+          <span className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-500 flex-shrink-0">
+            {idx + 1}
+          </span>
+
+          <div className="flex-1 min-w-0">
+            <Link
+              href={`/admin/content/${subjectId}/topics/${topic.id}`}
+              className="font-medium text-gray-900 group-hover:text-accent transition-colors text-sm"
+            >
+              {topic.title}
+            </Link>
+            <div className="flex items-center gap-3 mt-0.5">
+              <span className="text-xs text-gray-400 flex items-center gap-1">
+                <FileText className="h-3 w-3" />
+                {topic.stepCount} {topic.stepCount === 1 ? "step" : "steps"}
+              </span>
+              {topic.quiz && (
+                <span className="text-xs text-accent flex items-center gap-1">
+                  <HelpCircle className="h-3 w-3" />
+                  Quiz ({topic.quiz.passingScore}% passing)
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <DeleteTopicButton topicId={topic.id} topicTitle={topic.title} />
+            <Link href={`/admin/content/${subjectId}/topics/${topic.id}`}>
+              <Button variant="ghost" size="icon" className="text-gray-400 hover:text-accent">
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+export function SortableTopicList({
+  subjectId,
+  topics: initialTopics,
+}: {
+  subjectId: string;
+  topics: TopicListItem[];
+}) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [topics, setTopics] = React.useState(initialTopics);
+
+  React.useEffect(() => {
+    setTopics(initialTopics);
+  }, [initialTopics]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIdx = topics.findIndex((t) => t.id === active.id);
+    const newIdx = topics.findIndex((t) => t.id === over.id);
+    if (oldIdx === -1 || newIdx === -1) return;
+
+    // When dragging across day/week groups, adopt the target week + day.
+    const target = topics[newIdx];
+    const moved = { ...topics[oldIdx], weekNumber: target.weekNumber, dayNumber: target.dayNumber };
+    const without = topics.filter((_, i) => i !== oldIdx);
+    const reordered = [...without.slice(0, newIdx), moved, ...without.slice(newIdx)];
+
+    setTopics(reordered); // optimistic
+
+    try {
+      const res = await fetch("/api/topics/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          reordered.map((t, i) => ({
+            id: t.id,
+            orderIndex: i,
+            weekNumber: t.weekNumber,
+            dayNumber: t.dayNumber,
+          }))
+        ),
+      });
+      if (!res.ok) throw new Error();
+      router.refresh();
+    } catch {
+      toast("Failed to save order", "error");
+      setTopics(initialTopics);
+    }
+  }
+
+  // Build a Week -> Day -> Topics nested structure from the flat sorted list.
+  type DayGroup = { day: number | null; items: TopicListItem[] };
+  type WeekGroup = { week: number | null; days: DayGroup[] };
+  const weeks: WeekGroup[] = [];
+  for (const t of topics) {
+    let week = weeks[weeks.length - 1];
+    if (!week || week.week !== t.weekNumber) {
+      week = { week: t.weekNumber, days: [] };
+      weeks.push(week);
+    }
+    let day = week.days[week.days.length - 1];
+    if (!day || day.day !== t.dayNumber) {
+      day = { day: t.dayNumber, items: [] };
+      week.days.push(day);
+    }
+    day.items.push(t);
+  }
+
+  const hasAnyWeek = topics.some((t) => t.weekNumber != null);
+  const hasAnyDay = topics.some((t) => t.dayNumber != null);
+
+  return (
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <SortableContext items={topics.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+        <div className="space-y-6">
+          {weeks.map((weekGroup, wi) => {
+            const weekTopicCount = weekGroup.days.reduce((n, d) => n + d.items.length, 0);
+            return (
+              <div key={`w-${weekGroup.week ?? "none"}-${wi}`} className="space-y-3">
+                {hasAnyWeek && (
+                  <div className="flex items-center gap-2 px-1 pt-1">
+                    <h2 className="text-sm font-bold text-gray-900">
+                      {weekGroup.week != null ? `Week ${weekGroup.week}` : "Unscheduled"}
+                    </h2>
+                    <div className="flex-1 h-px bg-gray-300" />
+                    <span className="text-[11px] font-medium text-gray-500">
+                      {weekTopicCount} {weekTopicCount === 1 ? "topic" : "topics"}
+                    </span>
+                  </div>
+                )}
+                <div className="space-y-4 pl-1">
+                  {weekGroup.days.map((dayGroup, di) => {
+                    const startIdx = topics.findIndex((t) => t.id === dayGroup.items[0].id);
+                    return (
+                      <div key={`d-${dayGroup.day ?? "none"}-${di}`} className="space-y-2">
+                        {hasAnyDay && (
+                          <div className="flex items-center gap-2 px-1">
+                            <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                              {dayGroup.day != null ? `Day ${dayGroup.day}` : "Unscheduled"}
+                            </h3>
+                            <div className="flex-1 h-px bg-gray-200" />
+                            <span className="text-[10px] text-gray-400">
+                              {dayGroup.items.length}{" "}
+                              {dayGroup.items.length === 1 ? "topic" : "topics"}
+                            </span>
+                          </div>
+                        )}
+                        {dayGroup.items.map((topic, i) => (
+                          <SortableTopicRow
+                            key={topic.id}
+                            topic={topic}
+                            idx={startIdx + i}
+                            subjectId={subjectId}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }

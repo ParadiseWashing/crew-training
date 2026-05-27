@@ -132,6 +132,8 @@ model Topic {
   title       String
   description String?
   orderIndex  Int
+  weekNumber  Int?
+  dayNumber   Int?
   steps       Step[]
   quiz        Quiz?
   createdAt   DateTime @default(now())

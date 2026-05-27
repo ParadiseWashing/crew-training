@@ -49,6 +49,8 @@ interface TopicMeta {
   title: string;
   description: string | null;
   orderIndex: number;
+  weekNumber: number | null;
+  dayNumber: number | null;
   steps: StepMeta[];
   quiz: QuizMeta | null;
   allStepsComplete: boolean;
@@ -1229,8 +1231,33 @@ export function SubjectViewerClient({
                 const tDone = topic.steps.filter((s) => s.completed).length;
                 const tTotal = topic.steps.length;
                 const tComplete = topic.allStepsComplete;
+
+                // Inject Week / Day separator headers before this topic when the
+                // week or day changes from the previous topic.
+                const prev = topicIdx > 0 ? orderedTopics[topicIdx - 1] : null;
+                const showWeekHeader =
+                  topic.weekNumber != null &&
+                  (!prev || prev.weekNumber !== topic.weekNumber);
+                const showDayHeader =
+                  topic.dayNumber != null &&
+                  (!prev ||
+                    prev.weekNumber !== topic.weekNumber ||
+                    prev.dayNumber !== topic.dayNumber);
+
                 return (
-                  <div key={topic.id} className="tl-topic">
+                  <React.Fragment key={topic.id}>
+                    {showWeekHeader && (
+                      <div className="tl-week-header">
+                        <span className="tl-week-header__label">
+                          Week {topic.weekNumber}
+                        </span>
+                        <span className="tl-week-header__rule" />
+                      </div>
+                    )}
+                    {showDayHeader && (
+                      <div className="tl-day-header">Day {topic.dayNumber}</div>
+                    )}
+                  <div className="tl-topic">
                     <button
                       type="button"
                       onClick={() => toggleTopic(topic.id)}
@@ -1374,6 +1401,7 @@ export function SubjectViewerClient({
                       </div>
                     )}
                   </div>
+                  </React.Fragment>
                 );
               })}
             </div>

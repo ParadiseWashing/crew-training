@@ -86,6 +86,8 @@ export default async function SubjectViewerPage({ params, searchParams }: PagePr
     title: topic.title,
     description: topic.description,
     orderIndex: topic.orderIndex,
+    weekNumber: topic.weekNumber,
+    dayNumber: topic.dayNumber,
     steps: topic.steps.map((step) => ({
       id: step.id,
       title: step.title,

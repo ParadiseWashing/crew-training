@@ -353,6 +353,33 @@ html[data-theme="dark"] body { color: #F4F2EE; }
   display: flex; flex-direction: column; gap: 4px;
 }
 
+/* Week / Day separator headers inside the topic rail */
+.tl-week-header {
+  display: flex; align-items: center; gap: 8px;
+  margin: 14px 4px 6px;
+}
+.tl-week-header:first-child { margin-top: 4px; }
+.tl-week-header__label {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-accent, #0f766e);
+  background: var(--c-accent-tint, rgba(15, 118, 110, 0.08));
+  padding: 4px 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+.tl-week-header__rule {
+  flex: 1; height: 1px;
+  background: var(--c-border, #e5e7eb);
+}
+.tl-day-header {
+  font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--c-muted, #6b7280);
+  padding: 4px 6px 2px;
+  margin: 4px 0 0;
+}
+
 /* topic group */
 .tl-topic { display: flex; flex-direction: column; }
 .tl-topic__head {

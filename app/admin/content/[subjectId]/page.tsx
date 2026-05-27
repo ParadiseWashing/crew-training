@@ -7,10 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  GripVertical,
   FileText,
-  HelpCircle,
-  ChevronRight,
   BookOpen,
   Settings,
 } from "lucide-react";
@@ -18,8 +15,8 @@ import { categoryLabel, categoryColor } from "@/lib/utils";
 import {
   PublishToggle,
   AddTopicButton,
-  DeleteTopicButton,
   EditSubjectForm,
+  SortableTopicList,
 } from "./subject-detail-client";
 
 export const dynamic = "force-dynamic";
@@ -105,55 +102,17 @@ export default async function SubjectDetailPage({ params }: PageProps) {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-2">
-              {subject.topics.map((topic, idx) => (
-                <Card key={topic.id} className="group hover:shadow-sm transition-shadow">
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    {/* Drag handle (visual indicator) */}
-                    <div className="text-gray-300 cursor-grab flex-shrink-0">
-                      <GripVertical className="h-4 w-4" />
-                    </div>
-
-                    {/* Order number */}
-                    <span className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs font-medium text-gray-500 flex-shrink-0">
-                      {idx + 1}
-                    </span>
-
-                    {/* Topic info */}
-                    <div className="flex-1 min-w-0">
-                      <Link
-                        href={`/admin/content/${subject.id}/topics/${topic.id}`}
-                        className="font-medium text-gray-900 group-hover:text-accent transition-colors text-sm"
-                      >
-                        {topic.title}
-                      </Link>
-                      <div className="flex items-center gap-3 mt-0.5">
-                        <span className="text-xs text-gray-400 flex items-center gap-1">
-                          <FileText className="h-3 w-3" />
-                          {topic.steps.length} {topic.steps.length === 1 ? "step" : "steps"}
-                        </span>
-                        {topic.quiz && (
-                          <span className="text-xs text-accent flex items-center gap-1">
-                            <HelpCircle className="h-3 w-3" />
-                            Quiz ({topic.quiz.passingScore}% passing)
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <DeleteTopicButton topicId={topic.id} topicTitle={topic.title} />
-                      <Link href={`/admin/content/${subject.id}/topics/${topic.id}`}>
-                        <Button variant="ghost" size="icon" className="text-gray-400 hover:text-accent">
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
+            <SortableTopicList
+              subjectId={subject.id}
+              topics={subject.topics.map((t) => ({
+                id: t.id,
+                title: t.title,
+                weekNumber: t.weekNumber,
+                dayNumber: t.dayNumber,
+                stepCount: t.steps.length,
+                quiz: t.quiz ? { id: t.quiz.id, passingScore: t.quiz.passingScore } : null,
+              }))}
+            />
           )}
         </div>
 
