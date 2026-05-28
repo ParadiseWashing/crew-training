@@ -138,8 +138,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ us
         });
       }
 
-      // Fire notification if the "New Hire / Onboarding" role was just added
-      void notifyNewHireAssigned({
+      // Fire notification if the "New Hire / Onboarding" role was just added.
+      // Awaited so it actually runs in Vercel serverless (fire-and-forget
+      // promises get killed when the function returns).
+      await notifyNewHireAssigned({
         newHireUserId: userId,
         newHireName: user.name,
         newHireEmail: user.email,

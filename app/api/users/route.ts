@@ -116,8 +116,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Notify Operational Managers if the New Hire / Onboarding role was assigned
-    void notifyNewHireAssigned({
+    // Notify Operational Managers if the New Hire / Onboarding role was
+    // assigned. Awaited so it actually runs in Vercel serverless (fire-and-
+    // forget promises get killed when the function returns).
+    await notifyNewHireAssigned({
       newHireUserId: user.id,
       newHireName: user.name,
       newHireEmail: user.email,
