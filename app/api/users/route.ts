@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
+import { notifyNewHireAssigned } from "@/lib/onboarding-notifications";
 
 const INVITE_EXPIRY_DAYS = 14;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -16,6 +17,7 @@ export async function GET() {
   const users = await prisma.user.findMany({
     include: {
       jobRole: true,
+      jobRoles: { include: { jobRole: true } },
       assignments: {
         include: { subject: { select: { id: true, title: true } } },
       },
@@ -38,10 +40,19 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { name, email, password, systemRole } = body;
-    // Treat empty string / "none" / null as "no job role"
-    const rawJobRoleId = body.jobRoleId;
-    const jobRoleId =
-      rawJobRoleId && rawJobRoleId !== "none" ? String(rawJobRoleId) : null;
+
+    // jobRoleIds is a string[] of selected role IDs (checklist). Fall back to
+    // legacy single jobRoleId for backwards-compat with older clients.
+    let jobRoleIds: string[] = [];
+    if (Array.isArray(body.jobRoleIds)) {
+      jobRoleIds = body.jobRoleIds.filter(
+        (v: unknown): v is string => typeof v === "string" && v.length > 0 && v !== "none"
+      );
+    } else if (body.jobRoleId && body.jobRoleId !== "none") {
+      jobRoleIds = [String(body.jobRoleId)];
+    }
+    // De-dupe
+    jobRoleIds = [...new Set(jobRoleIds)];
 
     if (!name || !email) {
       return NextResponse.json({ error: "name, email required" }, { status: 400 });
@@ -69,6 +80,10 @@ export async function POST(req: NextRequest) {
       inviteExpires = new Date(Date.now() + INVITE_EXPIRY_DAYS * MS_PER_DAY);
     }
 
+    // Use the first selected role as the "primary" for backwards compat with
+    // older read sites that use User.jobRole. All roles also go into the join.
+    const primaryJobRoleId = jobRoleIds[0] ?? null;
+
     const user = await prisma.user.create({
       data: {
         name,
@@ -78,28 +93,36 @@ export async function POST(req: NextRequest) {
         inviteStatus,
         inviteExpires,
         systemRole: systemRole || "TRAINEE",
-        jobRoleId,
+        jobRoleId: primaryJobRoleId,
+        jobRoles: {
+          create: jobRoleIds.map((id) => ({ jobRoleId: id })),
+        },
       },
-      include: { jobRole: true },
+      include: { jobRole: true, jobRoles: { include: { jobRole: true } } },
     });
 
-    // Auto-assign subjects for the job role
-    if (jobRoleId) {
-      const jobRole = await prisma.jobRole.findUnique({
-        where: { id: jobRoleId },
-        include: { subjects: true },
+    // Auto-assign subjects for every selected job role.
+    if (jobRoleIds.length > 0) {
+      const links = await prisma.jobRoleSubject.findMany({
+        where: { jobRoleId: { in: jobRoleIds } },
+        select: { subjectId: true },
       });
-
-      if (jobRole?.subjects.length) {
+      const subjectIds = [...new Set(links.map((l) => l.subjectId))];
+      if (subjectIds.length > 0) {
         await prisma.assignment.createMany({
-          data: jobRole.subjects.map((s) => ({
-            userId: user.id,
-            subjectId: s.subjectId,
-          })),
+          data: subjectIds.map((subjectId) => ({ userId: user.id, subjectId })),
           skipDuplicates: true,
         });
       }
     }
+
+    // Notify Operational Managers if the New Hire / Onboarding role was assigned
+    void notifyNewHireAssigned({
+      newHireUserId: user.id,
+      newHireName: user.name,
+      newHireEmail: user.email,
+      assignedJobRoleIds: jobRoleIds,
+    });
 
     const { passwordHash: _ph, inviteToken: _it, ...safeUser } = user;
     return NextResponse.json(safeUser, { status: 201 });

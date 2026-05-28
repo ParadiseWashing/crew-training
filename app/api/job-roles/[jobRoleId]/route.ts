@@ -10,7 +10,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ jo
 
   const { jobRoleId } = await params;
   const body = await req.json();
-  const { title, description, color, subjectIds, canAccessLeadership } = body;
+  const { title, description, color, subjectIds, canAccessLeadership, canSignOffTraining } = body;
 
   const updated = await prisma.jobRole.update({
     where: { id: jobRoleId },
@@ -19,6 +19,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ jo
       ...(description !== undefined && { description }),
       ...(color && { color }),
       ...(canAccessLeadership !== undefined && { canAccessLeadership: Boolean(canAccessLeadership) }),
+      ...(canSignOffTraining !== undefined && { canSignOffTraining: Boolean(canSignOffTraining) }),
     },
   });
 

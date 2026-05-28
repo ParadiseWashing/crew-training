@@ -22,15 +22,9 @@ export default async function WorkingInterviewDetailPage({
   const session = await auth();
   if (!session) redirect("/login");
 
-  let allowed = session.user.systemRole === "ADMIN";
-  if (!allowed) {
-    const u = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { jobRole: { select: { canAccessLeadership: true } } },
-    });
-    allowed = Boolean(u?.jobRole?.canAccessLeadership);
-  }
-  if (!allowed) notFound();
+  const { getUserPermissions } = await import("@/lib/permissions");
+  const perms = await getUserPermissions(session.user.id);
+  if (!perms.canAccessLeadership) notFound();
 
   const { interviewId } = await params;
 

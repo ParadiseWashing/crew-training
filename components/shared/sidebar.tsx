@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BookOpen, Users, BarChart3, Settings,
   GraduationCap, TrendingUp, Building2, Menu, X, LogOut, ChevronRight, AlertTriangle,
-  ShieldCheck,
+  ShieldCheck, ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
@@ -38,21 +38,36 @@ const leadershipNavItem: NavItem = {
   icon: <ShieldCheck className="h-5 w-5" />,
 };
 
+const signOffsNavItem: NavItem = {
+  label: "Sign-Offs",
+  href: "/trainee/sign-offs",
+  icon: <ClipboardCheck className="h-5 w-5" />,
+};
+
 interface SidebarProps {
   user: { name: string; email: string; image?: string | null; systemRole: string };
   /** True when the user's JobRole has canAccessLeadership=true OR they are an admin. */
   canAccessLeadership?: boolean;
+  /** True when the user's JobRole has canSignOffTraining=true OR they are an admin. */
+  canSignOffTraining?: boolean;
 }
 
-export function Sidebar({ user, canAccessLeadership = false }: SidebarProps) {
+export function Sidebar({
+  user,
+  canAccessLeadership = false,
+  canSignOffTraining = false,
+}: SidebarProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const isAdmin = user.systemRole === "ADMIN";
-  const navItems = isAdmin
+
+  const navItems: NavItem[] = isAdmin
     ? adminNav
-    : canAccessLeadership
-      ? [...traineeNav, leadershipNavItem]
-      : traineeNav;
+    : [
+        ...traineeNav,
+        ...(canAccessLeadership ? [leadershipNavItem] : []),
+        ...(canSignOffTraining ? [signOffsNavItem] : []),
+      ];
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-[#FFFFFF]">

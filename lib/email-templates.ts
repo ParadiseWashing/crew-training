@@ -83,3 +83,75 @@ If you didn't expect this email, you can safely ignore it.
 
   return { subject, html, text };
 }
+
+// ─── New Hire Notification (sent to Operational Managers) ──────────────────
+
+export interface NewHireNotificationData {
+  recipientName: string;
+  recipientEmail: string;
+  newHireName: string;
+  newHireEmail: string;
+  appUrl?: string;
+  companyName?: string;
+}
+
+export function buildNewHireNotificationEmail(data: NewHireNotificationData): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const company = data.companyName ?? "Paradise Washing";
+  const appUrl = data.appUrl ?? "https://paradiseacademy.vercel.app";
+  const signOffsUrl = `${appUrl}/trainee/sign-offs`;
+  const subject = `New hire onboarding — ${data.newHireName}`;
+
+  const text = `Hi ${data.recipientName},
+
+A new hire has been assigned the New Hire / Onboarding role:
+
+  Name:  ${data.newHireName}
+  Email: ${data.newHireEmail}
+
+They will move through the Company Overview & Onboarding module over the next 4 weeks. Default trainer rotation: Brandon -> Lance -> Brandon -> Brandon.
+
+Open the sign-offs board to see and certify their progress:
+${signOffsUrl}
+
+— ${company}`;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8" /><title>${subject}</title></head>
+<body style="margin:0;padding:0;background-color:#f7f6f3;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="padding:32px 0;">
+    <tr><td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="560" style="background-color:#ffffff;border-radius:12px;overflow:hidden;">
+        <tr><td style="padding:32px 32px 0 32px;">
+          <p style="margin:0;font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:#6b7280;font-weight:600;">New Hire</p>
+          <h1 style="margin:6px 0 16px 0;font-size:22px;color:#111827;">${data.newHireName} just started onboarding</h1>
+          <p style="margin:0 0 16px 0;font-size:14px;color:#4b5563;line-height:1.55;">
+            ${data.newHireName} (${data.newHireEmail}) has been assigned the
+            <strong>New Hire / Onboarding</strong> role.
+          </p>
+          <p style="margin:0 0 16px 0;font-size:14px;color:#4b5563;line-height:1.55;">
+            They will move through the <strong>Company Overview &amp; Onboarding</strong> module over the next 4 weeks.
+            Default trainer rotation: <strong>Brandon &rarr; Lance &rarr; Brandon &rarr; Brandon</strong>.
+          </p>
+          <p style="margin:24px 0;text-align:center;">
+            <a href="${signOffsUrl}" style="display:inline-block;background-color:#F08A3E;color:#ffffff;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;">
+              View Sign-Offs
+            </a>
+          </p>
+          <p style="margin:24px 0 0 0;padding-top:20px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;line-height:1.5;">
+            You're receiving this because you are an Operational Manager at ${company}.
+          </p>
+        </td></tr>
+      </table>
+      <p style="margin:16px 0 0 0;font-size:12px;color:#9ca3af;">© ${new Date().getFullYear()} ${company}. All rights reserved.</p>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  return { subject, html, text };
+}

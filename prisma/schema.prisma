@@ -57,7 +57,8 @@ model User {
   inviteExpires DateTime?
   systemRole    SystemRole     @default(TRAINEE)
   jobRoleId     String?
-  jobRole       JobRole?       @relation(fields: [jobRoleId], references: [id])
+  jobRole       JobRole?       @relation("UserPrimaryJobRole", fields: [jobRoleId], references: [id])
+  jobRoles      UserJobRole[]
   accounts      Account[]
   sessions      Session[]
   assignments   Assignment[]
@@ -67,6 +68,8 @@ model User {
   auditFlags    TrainingAuditFlag[]
   startedInterviews WorkingInterview[]    @relation("StartedInterviews")
   evaluatedDays     WorkingInterviewDay[] @relation("EvaluatedDays")
+  weeklySignOffsAsTrainee WeeklySignOff[] @relation("WeeklySignOffTrainee")
+  weeklySignOffsAsTrainer WeeklySignOff[] @relation("WeeklySignOffTrainer")
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -87,9 +90,22 @@ model JobRole {
   description           String?
   color                 String?          @default("#3B82F6")
   canAccessLeadership   Boolean          @default(false)
-  users                 User[]
+  canSignOffTraining    Boolean          @default(false)
+  users                 User[]           @relation("UserPrimaryJobRole")
+  userAssignments       UserJobRole[]
   subjects              JobRoleSubject[]
   createdAt             DateTime         @default(now())
+}
+
+model UserJobRole {
+  userId     String
+  jobRoleId  String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobRole    JobRole  @relation(fields: [jobRoleId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+
+  @@id([userId, jobRoleId])
+  @@index([jobRoleId])
 }
 
 model Subject {
@@ -105,6 +121,7 @@ model Subject {
   jobRoles        JobRoleSubject[]
   assignments     Assignment[]
   signOffs        SignOff[]
+  weeklySignOffs  WeeklySignOff[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 }
@@ -307,4 +324,34 @@ enum WorkingInterviewDecision {
   DQ
   HIRE
   DO_NOT_HIRE
+}
+
+// ─── Weekly Sign-Off ──────────────────────────────────────────────────────────
+// Trainer-only weekly certification. The trainer evaluates a trainee at the end
+// of each week of a multi-week onboarding curriculum (e.g. Final Cleaning -
+// Custom Homes Week 1-4) and records pass/fail with per-topic ratings.
+
+model WeeklySignOff {
+  id                String           @id @default(cuid())
+  subjectId         String
+  subject           Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  weekNumber        Int
+  traineeUserId     String
+  trainee           User             @relation("WeeklySignOffTrainee", fields: [traineeUserId], references: [id], onDelete: Cascade)
+  trainerUserId     String
+  trainer           User             @relation("WeeklySignOffTrainer", fields: [trainerUserId], references: [id])
+  decision          WeeklySignOffDecision
+  topicRatings      Json             // { [topicId]: "PASS" | "NEEDS_WORK" }
+  notes             String?
+  trainerSignedName String
+  signedAt          DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  @@unique([subjectId, weekNumber, traineeUserId])
+  @@index([trainerUserId])
+}
+
+enum WeeklySignOffDecision {
+  PASSED
+  FAILED
 }

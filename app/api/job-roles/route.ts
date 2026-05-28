@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { title, description, color, subjectIds, canAccessLeadership } = body;
+  const { title, description, color, subjectIds, canAccessLeadership, canSignOffTraining } = body;
 
   if (!title) return NextResponse.json({ error: "Title required" }, { status: 400 });
 
@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
       description,
       color: color || "#F08A3E",
       canAccessLeadership: Boolean(canAccessLeadership),
+      canSignOffTraining: Boolean(canSignOffTraining),
       subjects: subjectIds?.length
         ? { create: (subjectIds as string[]).map((id: string) => ({ subjectId: id })) }
         : undefined,

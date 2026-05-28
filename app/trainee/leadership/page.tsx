@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getUserPermissions } from "@/lib/permissions";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClipboardCheck, ArrowRight } from "lucide-react";
 
@@ -11,16 +12,8 @@ export default async function LeadershipLandingPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  // Gate: admin OR JobRole.canAccessLeadership.
-  let allowed = session.user.systemRole === "ADMIN";
-  if (!allowed) {
-    const u = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { jobRole: { select: { canAccessLeadership: true } } },
-    });
-    allowed = Boolean(u?.jobRole?.canAccessLeadership);
-  }
-  if (!allowed) notFound();
+  const perms = await getUserPermissions(session.user.id);
+  if (!perms.canAccessLeadership) notFound();
 
   // Pull a couple of counters to show on the tile.
   const [inProgress, completed] = await Promise.all([

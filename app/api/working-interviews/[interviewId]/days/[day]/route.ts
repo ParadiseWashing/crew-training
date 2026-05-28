@@ -12,12 +12,9 @@ import {
 async function requireLeadershipAccess() {
   const session = await auth();
   if (!session) return { error: "Unauthorized", status: 401 as const };
-  if (session.user.systemRole === "ADMIN") return { session };
-  const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
-    select: { jobRole: { select: { canAccessLeadership: true } } },
-  });
-  if (!user?.jobRole?.canAccessLeadership) {
+  const { getUserPermissions } = await import("@/lib/permissions");
+  const perms = await getUserPermissions(session.user.id);
+  if (!perms.canAccessLeadership) {
     return { error: "Forbidden", status: 403 as const };
   }
   return { session };

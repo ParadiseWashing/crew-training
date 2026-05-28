@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { notifyNewHireAssigned } from "@/lib/onboarding-notifications";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ userId: string }> }) {
   const session = await auth();
@@ -54,19 +55,33 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ us
     const { userId } = await params;
     const body = await req.json();
     const { name, email, password, systemRole } = body;
-    // Treat empty string / "none" / null as "no job role"
-    const rawJobRoleId = body.jobRoleId;
-    const normalizedJobRoleId =
-      rawJobRoleId === undefined
-        ? undefined
-        : rawJobRoleId && rawJobRoleId !== "none"
-          ? String(rawJobRoleId)
-          : null;
 
-    const oldUser = await prisma.user.findUnique({
+    // jobRoleIds: full replacement list of job roles for this user.
+    // Fall back to legacy single jobRoleId for backwards-compat.
+    let jobRoleIdsProvided = false;
+    let jobRoleIds: string[] = [];
+    if (Array.isArray(body.jobRoleIds)) {
+      jobRoleIdsProvided = true;
+      jobRoleIds = body.jobRoleIds.filter(
+        (v: unknown): v is string => typeof v === "string" && v.length > 0 && v !== "none"
+      );
+    } else if (body.jobRoleId !== undefined) {
+      jobRoleIdsProvided = true;
+      jobRoleIds =
+        body.jobRoleId && body.jobRoleId !== "none" ? [String(body.jobRoleId)] : [];
+    }
+    jobRoleIds = [...new Set(jobRoleIds)];
+
+    // Snapshot existing role list so we can compute the "new role" diff
+    // for auto-assigning subjects + firing notifications.
+    const existing = await prisma.user.findUnique({
       where: { id: userId },
-      select: { jobRoleId: true },
+      select: {
+        jobRoleId: true,
+        jobRoles: { select: { jobRoleId: true } },
+      },
     });
+    const previousRoleIds = new Set(existing?.jobRoles.map((r) => r.jobRoleId) ?? []);
 
     const updateData: Record<string, unknown> = {};
     if (name) updateData.name = name;
@@ -81,30 +96,55 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ us
       updateData.passwordHash = await bcrypt.hash(password, 12);
     }
     if (systemRole) updateData.systemRole = systemRole;
-    if (normalizedJobRoleId !== undefined) updateData.jobRoleId = normalizedJobRoleId;
+    if (jobRoleIdsProvided) {
+      updateData.jobRoleId = jobRoleIds[0] ?? null; // legacy primary
+    }
 
-    const user = await prisma.user.update({
+    // Apply user field updates first
+    let user = await prisma.user.update({
       where: { id: userId },
       data: updateData,
-      include: { jobRole: true },
     });
 
-    // If job role changed, auto-assign new subjects
-    if (normalizedJobRoleId && normalizedJobRoleId !== oldUser?.jobRoleId) {
-      const jobRole = await prisma.jobRole.findUnique({
-        where: { id: normalizedJobRoleId },
-        include: { subjects: true },
-      });
-
-      if (jobRole?.subjects.length) {
-        await prisma.assignment.createMany({
-          data: jobRole.subjects.map((s) => ({
-            userId,
-            subjectId: s.subjectId,
-          })),
+    // Replace the UserJobRole join rows when a new list is given
+    if (jobRoleIdsProvided) {
+      await prisma.userJobRole.deleteMany({ where: { userId } });
+      if (jobRoleIds.length > 0) {
+        await prisma.userJobRole.createMany({
+          data: jobRoleIds.map((id) => ({ userId, jobRoleId: id })),
           skipDuplicates: true,
         });
       }
+    }
+
+    // Re-fetch with relations for the response
+    user = (await prisma.user.findUnique({
+      where: { id: userId },
+      include: { jobRole: true, jobRoles: { include: { jobRole: true } } },
+    }))!;
+
+    // Auto-assign subjects for any newly added job role
+    const newlyAddedRoleIds = jobRoleIds.filter((id) => !previousRoleIds.has(id));
+    if (newlyAddedRoleIds.length > 0) {
+      const links = await prisma.jobRoleSubject.findMany({
+        where: { jobRoleId: { in: newlyAddedRoleIds } },
+        select: { subjectId: true },
+      });
+      const subjectIds = [...new Set(links.map((l) => l.subjectId))];
+      if (subjectIds.length > 0) {
+        await prisma.assignment.createMany({
+          data: subjectIds.map((subjectId) => ({ userId, subjectId })),
+          skipDuplicates: true,
+        });
+      }
+
+      // Fire notification if the "New Hire / Onboarding" role was just added
+      void notifyNewHireAssigned({
+        newHireUserId: userId,
+        newHireName: user.name,
+        newHireEmail: user.email,
+        assignedJobRoleIds: newlyAddedRoleIds,
+      });
     }
 
     const { passwordHash: _, ...safeUser } = user;

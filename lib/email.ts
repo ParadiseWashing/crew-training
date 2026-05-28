@@ -4,7 +4,12 @@
 // a 2FA-enabled Workspace/Gmail account. Set EMAIL_ENABLED=true to send.
 
 import nodemailer, { type Transporter } from "nodemailer";
-import { buildInviteEmail, type InviteEmailData } from "./email-templates";
+import {
+  buildInviteEmail,
+  buildNewHireNotificationEmail,
+  type InviteEmailData,
+  type NewHireNotificationData,
+} from "./email-templates";
 
 const EMAIL_ENABLED = process.env.EMAIL_ENABLED === "true";
 const GMAIL_USER = process.env.GMAIL_USER;
@@ -67,5 +72,10 @@ async function sendEmail(input: SendEmailInput): Promise<{ sent: boolean; reason
 
 export async function sendInviteEmail(data: InviteEmailData) {
   const { subject, html, text } = buildInviteEmail(data);
+  return sendEmail({ to: data.recipientEmail, subject, html, text });
+}
+
+export async function sendNewHireNotificationEmail(data: NewHireNotificationData) {
+  const { subject, html, text } = buildNewHireNotificationEmail(data);
   return sendEmail({ to: data.recipientEmail, subject, html, text });
 }

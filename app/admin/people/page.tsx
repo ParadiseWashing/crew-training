@@ -27,6 +27,7 @@ export default async function PeoplePage() {
     prisma.user.findMany({
       include: {
         jobRole: true,
+        jobRoles: { select: { jobRoleId: true } },
         assignments: true,
         stepProgress: { orderBy: { completedAt: "desc" }, take: 1 },
       },
@@ -209,7 +210,13 @@ export default async function PeoplePage() {
                             {user.inviteStatus === "PENDING" && user.inviteToken && (
                               <SendIndividualInviteButton userId={user.id} userName={user.name} />
                             )}
-                            <EditUserButton user={user} jobRoles={jobRoles} />
+                            <EditUserButton
+                              user={{
+                                ...user,
+                                jobRoleIds: user.jobRoles.map((r) => r.jobRoleId),
+                              }}
+                              jobRoles={jobRoles}
+                            />
                             <DeleteUserButton userId={user.id} userName={user.name} />
                           </div>
                         </div>

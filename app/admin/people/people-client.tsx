@@ -45,6 +45,8 @@ interface UserData {
   systemRole: string;
   jobRoleId?: string | null;
   jobRole?: JobRoleSummary | null;
+  /** All job role IDs from the UserJobRole join (for multi-role editing). */
+  jobRoleIds?: string[];
 }
 
 interface JobRoleData {
@@ -53,6 +55,7 @@ interface JobRoleData {
   description?: string | null;
   color?: string | null;
   canAccessLeadership?: boolean;
+  canSignOffTraining?: boolean;
   subjects: { subject: SubjectSummary }[];
 }
 
@@ -69,11 +72,17 @@ export function CreateUserButton({ jobRoles }: { jobRoles: JobRoleSummary[] }) {
     email: "",
     password: "",
     systemRole: "TRAINEE",
-    jobRoleId: "",
   });
+  const [selectedJobRoleIds, setSelectedJobRoleIds] = React.useState<string[]>([]);
 
   function setField(k: keyof typeof form, v: string) {
     setForm((p) => ({ ...p, [k]: v }));
+  }
+
+  function toggleJobRole(id: string) {
+    setSelectedJobRoleIds((prev) =>
+      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
+    );
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -86,7 +95,7 @@ export function CreateUserButton({ jobRoles }: { jobRoles: JobRoleSummary[] }) {
         body: JSON.stringify({
           ...form,
           password: form.password || undefined,
-          jobRoleId: form.jobRoleId === "none" ? null : form.jobRoleId || null,
+          jobRoleIds: selectedJobRoleIds,
         }),
       });
       if (!res.ok) {
@@ -100,7 +109,8 @@ export function CreateUserButton({ jobRoles }: { jobRoles: JobRoleSummary[] }) {
         "success"
       );
       setOpen(false);
-      setForm({ name: "", email: "", password: "", systemRole: "TRAINEE", jobRoleId: "none" });
+      setForm({ name: "", email: "", password: "", systemRole: "TRAINEE" });
+      setSelectedJobRoleIds([]);
       router.refresh();
     } catch (err) {
       toast(err instanceof Error ? err.message : "Something went wrong", "error");
@@ -169,20 +179,32 @@ export function CreateUserButton({ jobRoles }: { jobRoles: JobRoleSummary[] }) {
             </Select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">Job Role</label>
-            <Select value={form.jobRoleId} onValueChange={(v) => setField("jobRoleId", v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select job role (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No role</SelectItem>
+            <label className="text-sm font-medium text-gray-700">
+              Job Roles ({selectedJobRoleIds.length} selected)
+            </label>
+            {jobRoles.length === 0 ? (
+              <p className="text-xs text-gray-400">No job roles defined yet.</p>
+            ) : (
+              <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto divide-y divide-gray-100">
                 {jobRoles.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {r.title}
-                  </SelectItem>
+                  <label
+                    key={r.id}
+                    className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={selectedJobRoleIds.includes(r.id)}
+                      onCheckedChange={() => toggleJobRole(r.id)}
+                      id={`create-user-role-${r.id}`}
+                    />
+                    <span className="text-sm text-gray-900">{r.title}</span>
+                  </label>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+            )}
+            <p className="text-xs text-gray-500">
+              Assigning the <strong>New Hire / Onboarding</strong> role notifies Operational
+              Managers and auto-assigns the onboarding module.
+            </p>
           </div>
           <DialogFooter>
             <DialogClose asChild>
@@ -209,11 +231,34 @@ export function EditUserButton({ user, jobRoles }: { user: UserData; jobRoles: J
     email: user.email,
     password: "",
     systemRole: user.systemRole,
-    jobRoleId: user.jobRoleId ?? "none",
   });
+  const [selectedJobRoleIds, setSelectedJobRoleIds] = React.useState<string[]>(
+    user.jobRoleIds ?? (user.jobRoleId ? [user.jobRoleId] : [])
+  );
+
+  // Re-sync if the row updates while the dialog is open
+  React.useEffect(() => {
+    if (open) {
+      setForm({
+        name: user.name,
+        email: user.email,
+        password: "",
+        systemRole: user.systemRole,
+      });
+      setSelectedJobRoleIds(
+        user.jobRoleIds ?? (user.jobRoleId ? [user.jobRoleId] : [])
+      );
+    }
+  }, [open, user]);
 
   function setField(k: keyof typeof form, v: string) {
     setForm((p) => ({ ...p, [k]: v }));
+  }
+
+  function toggleJobRole(id: string) {
+    setSelectedJobRoleIds((prev) =>
+      prev.includes(id) ? prev.filter((r) => r !== id) : [...prev, id]
+    );
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -224,7 +269,7 @@ export function EditUserButton({ user, jobRoles }: { user: UserData; jobRoles: J
         name: form.name,
         email: form.email,
         systemRole: form.systemRole,
-        jobRoleId: form.jobRoleId || null,
+        jobRoleIds: selectedJobRoleIds,
       };
       if (form.password) payload.password = form.password;
 
@@ -297,20 +342,32 @@ export function EditUserButton({ user, jobRoles }: { user: UserData; jobRoles: J
             </Select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-gray-700">Job Role</label>
-            <Select value={form.jobRoleId} onValueChange={(v) => setField("jobRoleId", v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="No role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No role</SelectItem>
+            <label className="text-sm font-medium text-gray-700">
+              Job Roles ({selectedJobRoleIds.length} selected)
+            </label>
+            {jobRoles.length === 0 ? (
+              <p className="text-xs text-gray-400">No job roles defined yet.</p>
+            ) : (
+              <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto divide-y divide-gray-100">
                 {jobRoles.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>
-                    {r.title}
-                  </SelectItem>
+                  <label
+                    key={r.id}
+                    className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50 cursor-pointer"
+                  >
+                    <Checkbox
+                      checked={selectedJobRoleIds.includes(r.id)}
+                      onCheckedChange={() => toggleJobRole(r.id)}
+                      id={`edit-user-${user.id}-role-${r.id}`}
+                    />
+                    <span className="text-sm text-gray-900">{r.title}</span>
+                  </label>
                 ))}
-              </SelectContent>
-            </Select>
+              </div>
+            )}
+            <p className="text-xs text-gray-500">
+              Assigning the <strong>New Hire / Onboarding</strong> role notifies Operational
+              Managers and auto-assigns the onboarding module.
+            </p>
           </div>
           <DialogFooter>
             <DialogClose asChild>
@@ -389,6 +446,7 @@ export function CreateJobRoleButton({ subjects }: { subjects: SubjectSummary[] }
   const [description, setDescription] = React.useState("");
   const [color, setColor] = React.useState("#F08A3E");
   const [canAccessLeadership, setCanAccessLeadership] = React.useState(false);
+  const [canSignOffTraining, setCanSignOffTraining] = React.useState(false);
   const [selectedSubjects, setSelectedSubjects] = React.useState<string[]>([]);
 
   function toggleSubject(id: string) {
@@ -405,7 +463,7 @@ export function CreateJobRoleButton({ subjects }: { subjects: SubjectSummary[] }
       const res = await fetch("/api/job-roles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, color, canAccessLeadership, subjectIds: selectedSubjects }),
+        body: JSON.stringify({ title, description, color, canAccessLeadership, canSignOffTraining, subjectIds: selectedSubjects }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -417,6 +475,7 @@ export function CreateJobRoleButton({ subjects }: { subjects: SubjectSummary[] }
       setDescription("");
       setColor("#F08A3E");
       setCanAccessLeadership(false);
+      setCanSignOffTraining(false);
       setSelectedSubjects([]);
       router.refresh();
     } catch (err) {
@@ -487,6 +546,20 @@ export function CreateJobRoleButton({ subjects }: { subjects: SubjectSummary[] }
               </p>
             </div>
           </label>
+          <label className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer">
+            <Checkbox
+              checked={canSignOffTraining}
+              onCheckedChange={(c) => setCanSignOffTraining(Boolean(c))}
+              id="create-signoff-access"
+            />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900">Can sign off training</p>
+              <p className="text-xs text-gray-500">
+                Users with this role can certify trainees at the end of each onboarding week.
+                Enable for Crew Leads / Trainers (e.g. Lance, Brandon).
+              </p>
+            </div>
+          </label>
           {subjects.length > 0 && (
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-gray-700">
@@ -541,6 +614,9 @@ export function EditJobRoleButton({
   const [canAccessLeadership, setCanAccessLeadership] = React.useState(
     role.canAccessLeadership ?? false
   );
+  const [canSignOffTraining, setCanSignOffTraining] = React.useState(
+    role.canSignOffTraining ?? false
+  );
   const [selectedSubjects, setSelectedSubjects] = React.useState<string[]>(
     role.subjects.map((s) => s.subject.id)
   );
@@ -552,6 +628,7 @@ export function EditJobRoleButton({
       setDescription(role.description ?? "");
       setColor(role.color ?? "#F08A3E");
       setCanAccessLeadership(role.canAccessLeadership ?? false);
+      setCanSignOffTraining(role.canSignOffTraining ?? false);
       setSelectedSubjects(role.subjects.map((s) => s.subject.id));
     }
   }, [open, role]);
@@ -569,7 +646,7 @@ export function EditJobRoleButton({
       const res = await fetch(`/api/job-roles/${role.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, color, canAccessLeadership, subjectIds: selectedSubjects }),
+        body: JSON.stringify({ title, description, color, canAccessLeadership, canSignOffTraining, subjectIds: selectedSubjects }),
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
@@ -642,6 +719,20 @@ export function EditJobRoleButton({
               <p className="text-xs text-gray-500">
                 Users with this role can see the Leadership sidebar (Working Interviews etc).
                 Leave unchecked for regular crew.
+              </p>
+            </div>
+          </label>
+          <label className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer">
+            <Checkbox
+              checked={canSignOffTraining}
+              onCheckedChange={(c) => setCanSignOffTraining(Boolean(c))}
+              id={`edit-signoff-${role.id}`}
+            />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-900">Can sign off training</p>
+              <p className="text-xs text-gray-500">
+                Users with this role can certify trainees at the end of each onboarding week.
+                Enable for Crew Leads / Trainers (e.g. Lance, Brandon).
               </p>
             </div>
           </label>
