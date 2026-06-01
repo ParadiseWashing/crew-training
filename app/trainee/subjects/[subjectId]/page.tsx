@@ -91,7 +91,7 @@ export default async function SubjectViewerPage({ params, searchParams }: PagePr
     steps: topic.steps.map((step) => ({
       id: step.id,
       title: step.title,
-      stepType: step.stepType as "CONTENT" | "PDF",
+      stepType: step.stepType as "CONTENT" | "PDF" | "SIGNATURE",
       orderIndex: step.orderIndex,
       topicId: topic.id,
       completed: completedStepIds.has(step.id),
@@ -109,6 +109,39 @@ export default async function SubjectViewerPage({ params, searchParams }: PagePr
     allStepsComplete: topicCompletionMap[topic.id],
   }));
 
+  // If the active step is a SIGNATURE step, pre-resolve its data
+  let signatureStepData: {
+    pdfUrl: string | null;
+    agreementText: string;
+    alreadySigned: boolean;
+    signedAt: string | null;
+    driveWebLink: string | null;
+  } | null = null;
+
+  if (activeStep && activeStep.stepType === "SIGNATURE") {
+    const content = (activeStep.content ?? {}) as {
+      pdfUrl?: string;
+      agreementText?: string;
+    };
+    const existingSig = await prisma.handbookSignature.findFirst({
+      where: { userId: session.user.id, stepId: activeStep.id },
+      orderBy: { signedAt: "desc" },
+      select: { signedAt: true, driveFileId: true },
+    });
+    const driveWebLink = existingSig?.driveFileId
+      ? `https://drive.google.com/file/d/${existingSig.driveFileId}/view`
+      : null;
+    signatureStepData = {
+      pdfUrl: content.pdfUrl ?? null,
+      agreementText:
+        content.agreementText ??
+        "I acknowledge that I have read, understood, and agree to abide by the policies, procedures, and rules set forth in the Paradise Washing Employee Handbook. I understand that violations may result in disciplinary action up to and including termination.",
+      alreadySigned: Boolean(existingSig),
+      signedAt: existingSig?.signedAt.toISOString() ?? null,
+      driveWebLink,
+    };
+  }
+
   return (
     <SubjectViewerClient
       subjectId={subjectId}
@@ -118,7 +151,7 @@ export default async function SubjectViewerPage({ params, searchParams }: PagePr
       activeStepContent={
         activeStep ? (activeStep.content as object) : null
       }
-      activeStepType={activeStep ? (activeStep.stepType as "CONTENT" | "PDF") : null}
+      activeStepType={activeStep ? (activeStep.stepType as "CONTENT" | "PDF" | "SIGNATURE") : null}
       activeStepTitle={activeStep?.title ?? null}
       allStepsComplete={allStepsComplete}
       requiresSignOff={subject.requiresSignOff}
@@ -129,6 +162,7 @@ export default async function SubjectViewerPage({ params, searchParams }: PagePr
       }
       userId={session.user.id}
       userName={session.user.name ?? ""}
+      signatureStepData={signatureStepData}
     />
   );
 }

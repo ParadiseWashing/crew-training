@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { SignatureStepView } from "./signature-step-client";
 import {
   CheckCircle2,
   ChevronRight,
@@ -62,7 +63,15 @@ interface SubjectViewerClientProps {
   topics: TopicMeta[];
   activeStepId: string | null;
   activeStepContent: object | null;
-  activeStepType: "CONTENT" | "PDF" | null;
+  activeStepType: "CONTENT" | "PDF" | "SIGNATURE" | null;
+  /** Pre-resolved signature step data, only present when activeStepType=SIGNATURE. */
+  signatureStepData?: {
+    pdfUrl: string | null;
+    agreementText: string;
+    alreadySigned: boolean;
+    signedAt: string | null;
+    driveWebLink: string | null;
+  } | null;
   activeStepTitle: string | null;
   allStepsComplete: boolean;
   requiresSignOff: boolean;
@@ -899,8 +908,10 @@ export function SubjectViewerClient({
   existingSignOff,
   userId: _userId,
   userName,
+  signatureStepData,
 }: SubjectViewerClientProps) {
   const isPdfStep = activeStepType === "PDF";
+  const isSignatureStep = activeStepType === "SIGNATURE";
   const pdfContent = isPdfStep
     ? (activeStepContent as { type?: string; fileUrl?: string | null; fileName?: string | null } | null)
     : null;
@@ -1180,7 +1191,7 @@ export function SubjectViewerClient({
               <strong>{doneSteps}</strong>/{totalSteps} steps
             </span>
           </div>
-          {activeStep && !isCompleted && !isLocked && (
+          {activeStep && !isCompleted && !isLocked && !isSignatureStep && (
             <Button
               size="sm"
               variant="default"
@@ -1463,6 +1474,16 @@ export function SubjectViewerClient({
                         fileName={pdfContent?.fileName ?? null}
                         onOpen={() => setPdfOpened(true)}
                       />
+                    ) : isSignatureStep && signatureStepData ? (
+                      <SignatureStepView
+                        stepId={activeStepId!}
+                        userName={userName}
+                        pdfUrl={signatureStepData.pdfUrl}
+                        agreementText={signatureStepData.agreementText}
+                        alreadySigned={signatureStepData.alreadySigned}
+                        signedAt={signatureStepData.signedAt}
+                        driveWebLink={signatureStepData.driveWebLink}
+                      />
                     ) : (
                       <ContentRenderer content={activeStepContent} />
                     )}
@@ -1472,7 +1493,7 @@ export function SubjectViewerClient({
                   <div ref={contentEndRef} className="h-1" />
 
                   {/* Completion gate */}
-                  {!isCompleted && !isPdfStep && (
+                  {!isCompleted && !isPdfStep && !isSignatureStep && (
                     <CompletionGate
                       readingDone={readingDone}
                       scrollDone={scrolledToBottom}

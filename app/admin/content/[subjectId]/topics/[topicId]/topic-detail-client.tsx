@@ -79,12 +79,19 @@ import { cn } from "@/lib/utils";
 
 type QuestionType = "MULTIPLE_CHOICE" | "MULTIPLE_SELECT" | "TRUE_FALSE" | "WRITTEN_RESPONSE";
 
-type StepType = "CONTENT" | "PDF";
+type StepType = "CONTENT" | "PDF" | "SIGNATURE";
 
 interface PdfStepContent {
   type: "pdf";
   fileUrl: string | null;
   fileName: string | null;
+}
+
+interface SignatureStepContent {
+  type: "signature";
+  pdfUrl: string | null;
+  pdfFileName: string | null;
+  agreementText: string;
 }
 
 interface StepData {
@@ -609,7 +616,7 @@ export function StepEditor({ steps }: StepEditorProps) {
         </div>
       )}
 
-      {/* Editor or PDF upload, based on step type */}
+      {/* Editor / PDF upload / Signature config, based on step type */}
       {activeStep.stepType === "CONTENT" ? (
         <>
           <div className="border border-gray-200 rounded-lg overflow-hidden">
@@ -630,12 +637,17 @@ export function StepEditor({ steps }: StepEditorProps) {
             </Button>
           )}
         </>
-      ) : (
+      ) : activeStep.stepType === "PDF" ? (
         <PdfStepUploader
           fileUrl={pdfContent?.fileUrl ?? null}
           fileName={pdfContent?.fileName ?? null}
           uploading={uploading}
           onUploadClick={() => pdfInputRef.current?.click()}
+        />
+      ) : (
+        <SignatureStepEditor
+          stepId={activeStep.id}
+          initial={activeStep.content as SignatureStepContent | null}
         />
       )}
     </div>
@@ -851,12 +863,15 @@ export function AddStepButton({ topicId }: AddStepButtonProps) {
               <SelectContent>
                 <SelectItem value="CONTENT">Content — rich text, video, images</SelectItem>
                 <SelectItem value="PDF">PDF SOP — upload a PDF file</SelectItem>
+                <SelectItem value="SIGNATURE">Signature — electronic signature capture</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-[11px] text-gray-400">
               {stepType === "CONTENT"
                 ? "Build the step with the rich-text editor (best for written SOPs and walkthroughs)."
-                : "Just upload a PDF. Trainees view the PDF in-page; no other content is shown."}
+                : stepType === "PDF"
+                  ? "Just upload a PDF. Trainees view the PDF in-page; no other content is shown."
+                  : "Trainee reads a PDF then signs it. The signed copy auto-uploads to Google Drive."}
             </p>
           </div>
           <Input
@@ -1388,5 +1403,169 @@ export function QuizBuilder({ quiz }: QuizBuilderProps) {
         </Button>
       )}
     </form>
+  );
+}
+
+// ─── Signature Step Editor (admin) ────────────────────────────────────────────
+//
+// Admin configures: source PDF URL (the document trainees sign) + agreement
+// text shown above the signature pad.
+
+function SignatureStepEditor({
+  stepId,
+  initial,
+}: {
+  stepId: string;
+  initial: SignatureStepContent | null;
+}) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const [pdfUrl, setPdfUrl] = React.useState(initial?.pdfUrl ?? "");
+  const [pdfFileName, setPdfFileName] = React.useState(initial?.pdfFileName ?? "");
+  const [agreementText, setAgreementText] = React.useState(
+    initial?.agreementText ??
+      "I acknowledge that I have read, understood, and agree to abide by the policies, procedures, and rules set forth in the Paradise Washing Employee Handbook. I understand that violations may result in disciplinary action up to and including termination."
+  );
+  const [saving, setSaving] = React.useState(false);
+  const [uploading, setUploading] = React.useState(false);
+  const [dirty, setDirty] = React.useState(false);
+
+  function setField<T>(setter: (v: T) => void, v: T) {
+    setter(v);
+    setDirty(true);
+  }
+
+  async function handlePdfSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      toast("Please upload a PDF file", "error");
+      return;
+    }
+    setUploading(true);
+    try {
+      const res = await uploadFiles("sopUploader", { files: [file] });
+      const url = res?.[0]?.url;
+      if (!url) throw new Error("Upload returned no URL");
+      setPdfUrl(url);
+      setPdfFileName(file.name);
+      setDirty(true);
+      toast("PDF uploaded", "success");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Upload failed", "error");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      const content: SignatureStepContent = {
+        type: "signature",
+        pdfUrl: pdfUrl.trim() || null,
+        pdfFileName: pdfFileName.trim() || null,
+        agreementText: agreementText.trim(),
+      };
+      const res = await fetch(`/api/steps/${stepId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      toast("Signature step saved", "success");
+      setDirty(false);
+      router.refresh();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Save failed", "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/pdf"
+        className="hidden"
+        onChange={handlePdfSelected}
+      />
+
+      {/* Source PDF */}
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-gray-600">
+          Source document (PDF)
+        </label>
+        {pdfUrl ? (
+          <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 flex items-center gap-3">
+            <FileTextIcon className="h-5 w-5 text-accent flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {pdfFileName || "document.pdf"}
+              </p>
+              <a
+                href={pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-accent hover:underline truncate block"
+              >
+                {pdfUrl}
+              </a>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              loading={uploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Replace
+            </Button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+            className="w-full flex items-center justify-center gap-2 h-20 rounded-lg border-2 border-dashed border-gray-300 text-sm text-gray-500 hover:border-accent hover:text-accent hover:bg-accent-tint transition-colors disabled:opacity-50"
+          >
+            <Upload className="h-4 w-4" />
+            {uploading ? "Uploading..." : "Upload handbook PDF"}
+          </button>
+        )}
+        <p className="text-[11px] text-gray-400">
+          The handbook PDF trainees view + sign. The last page is where the signature
+          is stamped (calibrated for Paradise Washing handbook layout).
+        </p>
+      </div>
+
+      {/* Agreement text */}
+      <div className="space-y-2">
+        <label className="text-xs font-medium text-gray-600">
+          Agreement text
+        </label>
+        <textarea
+          value={agreementText}
+          onChange={(e) => setField(setAgreementText, e.target.value)}
+          rows={5}
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent"
+        />
+        <p className="text-[11px] text-gray-400">
+          Shown above the signature pad. The trainee must check a confirmation box
+          before submitting.
+        </p>
+      </div>
+
+      {dirty && (
+        <Button size="sm" loading={saving} onClick={save}>
+          <Save className="h-3.5 w-3.5" />
+          Save Signature Step
+        </Button>
+      )}
+    </div>
   );
 }

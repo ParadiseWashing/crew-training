@@ -70,6 +70,7 @@ model User {
   evaluatedDays     WorkingInterviewDay[] @relation("EvaluatedDays")
   weeklySignOffsAsTrainee WeeklySignOff[] @relation("WeeklySignOffTrainee")
   weeklySignOffsAsTrainer WeeklySignOff[] @relation("WeeklySignOffTrainer")
+  handbookSignatures      HandbookSignature[] @relation("UserHandbookSignatures")
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -166,6 +167,7 @@ model Step {
   content    Json
   orderIndex Int
   progress   StepProgress[]
+  handbookSignatures HandbookSignature[] @relation("StepHandbookSignatures")
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt
 }
@@ -173,6 +175,7 @@ model Step {
 enum StepType {
   CONTENT
   PDF
+  SIGNATURE
 }
 
 model StepProgress {
@@ -354,4 +357,40 @@ model WeeklySignOff {
 enum WeeklySignOffDecision {
   PASSED
   FAILED
+}
+
+// ─── Handbook Signature ──────────────────────────────────────────────────────
+// Audit record for each time a trainee signs an employee-handbook style
+// document. The signed PDF lives in Google Drive; this row stores metadata
+// + a permanent UploadThing backup so we never lose the audit trail.
+
+model HandbookSignature {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation("UserHandbookSignatures", fields: [userId], references: [id], onDelete: Cascade)
+  stepId            String
+  step              Step     @relation("StepHandbookSignatures", fields: [stepId], references: [id], onDelete: Cascade)
+  // The exact name printed (snapshot of the user's name at signing time).
+  printedName       String
+  signedAt          DateTime @default(now())
+  signatureMethod   SignatureMethod
+  // Typed-font name used when signatureMethod=TYPED. Empty otherwise.
+  typedSignatureText String?
+  // Drive
+  driveFileId       String?
+  driveFileName     String?
+  // Audit
+  ipAddress         String?
+  userAgent         String?
+  pdfSourceUrl      String?
+  // Backup copy on UploadThing in case the Drive file is deleted/moved
+  signedPdfUrl      String?
+
+  @@index([userId])
+  @@index([stepId])
+}
+
+enum SignatureMethod {
+  DRAWN
+  TYPED
 }
