@@ -15,11 +15,12 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/toast";
-import { Plus, BookOpen, RotateCcw, Trash2 } from "lucide-react";
+import { Plus, BookOpen, RotateCcw, Trash2, X } from "lucide-react";
 
 interface SubjectSummary {
   id: string;
   title: string;
+  isPublished: boolean;
 }
 
 interface AssignSubjectButtonProps {
@@ -39,7 +40,10 @@ export function AssignSubjectButton({
   const [loading, setLoading] = React.useState(false);
   const [selected, setSelected] = React.useState<string[]>([]);
 
-  const unassigned = subjects.filter((s) => !alreadyAssignedIds.includes(s.id));
+  const assignedSet = React.useMemo(
+    () => new Set(alreadyAssignedIds),
+    [alreadyAssignedIds]
+  );
 
   // Reset selection when dialog opens
   React.useEffect(() => {
@@ -104,42 +108,65 @@ export function AssignSubjectButton({
         <DialogHeader>
           <DialogTitle>Assign Subjects</DialogTitle>
           <DialogDescription>
-            Select published subjects to assign to this employee. Already-assigned subjects are
-            not shown.
+            Check the modules to assign to this employee. Modules already assigned
+            are checked and locked.
           </DialogDescription>
         </DialogHeader>
 
-        {unassigned.length === 0 ? (
+        {subjects.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
               <BookOpen className="h-6 w-6 text-gray-400" />
             </div>
             <p className="text-sm font-medium text-gray-900 mb-1">
-              All subjects assigned
+              No modules exist yet
             </p>
             <p className="text-sm text-gray-500">
-              This employee already has all published subjects assigned.
+              Create modules in the Content section first.
             </p>
           </div>
         ) : (
           <>
-            <div className="border border-gray-200 rounded-lg max-h-64 overflow-y-auto divide-y divide-gray-100">
-              {unassigned.map((subject) => (
-                <label
-                  key={subject.id}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
-                >
-                  <Checkbox
-                    id={`assign-${subject.id}`}
-                    checked={selected.includes(subject.id)}
-                    onCheckedChange={() => toggleSubject(subject.id)}
-                  />
-                  <span className="text-sm text-gray-700">{subject.title}</span>
-                </label>
-              ))}
+            <div className="border border-gray-200 rounded-lg max-h-72 overflow-y-auto divide-y divide-gray-100">
+              {subjects.map((subject) => {
+                const isAssigned = assignedSet.has(subject.id);
+                const isChecked = isAssigned || selected.includes(subject.id);
+                return (
+                  <label
+                    key={subject.id}
+                    className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+                      isAssigned
+                        ? "cursor-default opacity-60"
+                        : "hover:bg-gray-50 cursor-pointer"
+                    }`}
+                  >
+                    <Checkbox
+                      id={`assign-${subject.id}`}
+                      checked={isChecked}
+                      disabled={isAssigned}
+                      onCheckedChange={() =>
+                        !isAssigned && toggleSubject(subject.id)
+                      }
+                    />
+                    <span className="text-sm text-gray-700 flex-1">
+                      {subject.title}
+                    </span>
+                    {!subject.isPublished && (
+                      <span className="text-[10px] font-medium uppercase tracking-wide text-amber-600 bg-amber-50 rounded px-1.5 py-0.5">
+                        Draft
+                      </span>
+                    )}
+                    {isAssigned && (
+                      <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400">
+                        Assigned
+                      </span>
+                    )}
+                  </label>
+                );
+              })}
             </div>
             <p className="text-xs text-gray-400 mt-1">
-              {selected.length} of {unassigned.length} selected
+              {selected.length} selected
             </p>
           </>
         )}
@@ -150,7 +177,7 @@ export function AssignSubjectButton({
               Cancel
             </Button>
           </DialogClose>
-          {unassigned.length > 0 && (
+          {subjects.length > 0 && (
             <Button
               onClick={handleAssign}
               loading={loading}
@@ -246,6 +273,91 @@ export function ResetProgressButton({
           <Button variant="destructive" loading={loading} onClick={handleReset}>
             <RotateCcw className="h-3.5 w-3.5" />
             Reset Progress
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Unassign Subject Button ──────────────────────────────────────────────────
+
+interface UnassignButtonProps {
+  assignmentId: string;
+  userName: string;
+  subjectTitle: string;
+}
+
+export function UnassignButton({
+  assignmentId,
+  userName,
+  subjectTitle,
+}: UnassignButtonProps) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [open, setOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+
+  async function handleUnassign() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/assignments/${assignmentId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Failed to remove assignment");
+      }
+      toast(`Removed ${subjectTitle}`, "success");
+      setOpen(false);
+      router.refresh();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Something went wrong", "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-gray-600 hover:text-red-600 hover:border-red-200"
+        >
+          <X className="h-3.5 w-3.5" />
+          Unassign
+        </Button>
+      </DialogTrigger>
+      <DialogContent size="sm">
+        <DialogHeader>
+          <DialogTitle>Remove this assignment?</DialogTitle>
+          <DialogDescription asChild>
+            <div className="space-y-3 text-sm text-gray-600">
+              <p>
+                This removes{" "}
+                <span className="font-semibold text-gray-900">{subjectTitle}</span>{" "}
+                from{" "}
+                <span className="font-semibold text-gray-900">{userName}</span>&rsquo;s
+                assignments.
+              </p>
+              <p className="text-xs text-gray-500">
+                Their progress is kept &mdash; if you assign this subject again later,
+                their completed steps and quiz scores will still be there.
+              </p>
+            </div>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="outline">
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button variant="destructive" loading={loading} onClick={handleUnassign}>
+            <X className="h-3.5 w-3.5" />
+            Unassign
           </Button>
         </DialogFooter>
       </DialogContent>

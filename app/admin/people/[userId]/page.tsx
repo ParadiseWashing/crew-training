@@ -24,6 +24,7 @@ import {
   AssignSubjectButton,
   ResetProgressButton,
   ResetSignatureButton,
+  UnassignButton,
 } from "./user-detail-client";
 
 export default async function UserDetailPage({
@@ -34,7 +35,7 @@ export default async function UserDetailPage({
   await auth();
   const { userId } = await params;
 
-  const [user, allPublishedSubjects] = await Promise.all([
+  const [user, allSubjects] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       include: {
@@ -94,8 +95,7 @@ export default async function UserDetailPage({
       },
     }),
     prisma.subject.findMany({
-      where: { isPublished: true },
-      select: { id: true, title: true },
+      select: { id: true, title: true, isPublished: true },
       orderBy: { title: "asc" },
     }),
   ]);
@@ -137,7 +137,7 @@ export default async function UserDetailPage({
           <AssignSubjectButton
             userId={user.id}
             alreadyAssignedIds={alreadyAssignedIds}
-            subjects={allPublishedSubjects}
+            subjects={allSubjects}
           />
         }
       />
@@ -243,7 +243,7 @@ export default async function UserDetailPage({
                   <AssignSubjectButton
                     userId={user.id}
                     alreadyAssignedIds={alreadyAssignedIds}
-                    subjects={allPublishedSubjects}
+                    subjects={allSubjects}
                   />
                 </div>
               </CardContent>
@@ -315,12 +315,19 @@ export default async function UserDetailPage({
                               {completedSteps}/{totalSteps} steps
                             </p>
                           </div>
-                          <ResetProgressButton
-                            userId={user.id}
-                            userName={user.name}
-                            subjectId={subject.id}
-                            subjectTitle={subject.title}
-                          />
+                          <div className="flex items-center gap-2">
+                            <ResetProgressButton
+                              userId={user.id}
+                              userName={user.name}
+                              subjectId={subject.id}
+                              subjectTitle={subject.title}
+                            />
+                            <UnassignButton
+                              assignmentId={assignment.id}
+                              userName={user.name}
+                              subjectTitle={subject.title}
+                            />
+                          </div>
                         </div>
                       </div>
                       <Progress
