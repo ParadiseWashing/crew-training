@@ -7,9 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { categoryColor, categoryLabel, formatDate } from "@/lib/utils";
-import { CheckCircle2, BookOpen, ArrowRight, ClipboardList } from "lucide-react";
+import { CheckCircle2, BookOpen, ArrowRight, ClipboardList, Layers } from "lucide-react";
 
 export const dynamic = "force-dynamic";
+
+const categoryGradients: Record<string, string> = {
+  COMPANY: "from-purple-500 to-indigo-600",
+  POLICIES: "from-amber-400 to-orange-500",
+  PROCESSES: "from-accent to-accent-hover",
+};
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -166,8 +172,28 @@ export default async function TraineeHomePage() {
               return (
                 <Card
                   key={assignment.id}
-                  className="flex flex-col hover:shadow-md transition-shadow"
+                  className="flex flex-col overflow-hidden hover:shadow-md transition-shadow"
                 >
+                  {/* Cover image / gradient placeholder */}
+                  <div
+                    className={`relative aspect-[3/1] bg-gradient-to-br ${
+                      categoryGradients[assignment.subject.category] ??
+                      "from-gray-400 to-gray-600"
+                    }`}
+                  >
+                    <div className="absolute inset-0 bg-black/10" />
+                    {assignment.subject.coverImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={assignment.subject.coverImage}
+                        alt={assignment.subject.title}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Layers className="absolute top-4 right-4 h-8 w-8 text-white/40" />
+                    )}
+                  </div>
+
                   <CardContent className="flex flex-col flex-1 pt-5 pb-5">
                     {/* Category + status row */}
                     <div className="flex items-center justify-between gap-2 mb-3">

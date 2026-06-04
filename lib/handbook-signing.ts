@@ -1,35 +1,34 @@
-// ─── Handbook signing — PDF stamping ─────────────────────────────────────────
+// ─── Handbook signing — acknowledgment PDF generation ────────────────────────
 //
-// Fetches a source handbook PDF (the one configured on the SIGNATURE step),
-// stamps printed name + date + signature image into the bottom-of-page-17
-// signature block, and returns the modified PDF as a Buffer.
+// Generates a fresh, self-contained acknowledgment PDF from the agreement text
+// configured on the SIGNATURE step (typically pasted from the handbook's last
+// page). The document reproduces the agreement wording, then stamps a
+// Printed Name / Date / Signature block at the bottom. The result is uploaded
+// to Google Drive as the signed record.
 //
-// Coordinates were derived from the "Handbook v2 FR" layout (US Letter,
-// 612x792 pt). They target the SIGNATURE / PRINT NAME / DATE lines on the
-// final acknowledgement page. If the handbook layout changes, update the
-// constants in HANDBOOK_STAMP_LAYOUT below.
+// No coordinate calibration against any source PDF is required — the page is
+// built from scratch, so it works for any handbook.
 
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 
-/**
- * Where each field should land on the last page (PDF point coordinates,
- * origin = bottom-left). Calibrated against Handbook v2 FR (May 27, 2026).
- */
-export const HANDBOOK_STAMP_LAYOUT = {
-  // Inline blank in "I, ___, certify that I have received..." (top of page)
-  inlinePrintName: { x: 80, y: 590, fontSize: 11, maxWidth: 280 },
-  // Bottom PRINT NAME line (left side)
-  printNameLine: { x: 60, y: 340, fontSize: 11, maxWidth: 250 },
-  // Bottom DATE line (right side)
-  dateLine: { x: 425, y: 340, fontSize: 11, maxWidth: 130 },
-  // Bottom SIGNATURE line (full width below PRINT NAME)
-  signatureLine: { x: 60, y: 295, maxWidth: 480, maxHeight: 40 },
-};
+// US Letter, in PDF points (origin = bottom-left).
+const PAGE_W = 612;
+const PAGE_H = 792;
+const MARGIN = 60;
+const CONTENT_W = PAGE_W - MARGIN * 2;
 
-export interface StampHandbookInput {
-  /** Public URL of the source handbook PDF (e.g. UploadThing CDN URL). */
-  sourcePdfUrl: string;
+const BODY_SIZE = 11;
+const LINE_HEIGHT = 16;
+// Vertical room the signature block needs; if less remains, start a new page.
+const SIGNATURE_BLOCK_HEIGHT = 140;
+
+const GREAT_VIBES_URL =
+  "https://fonts.gstatic.com/s/greatvibes/v18/RWmMoKWR9v4ksMfaWd_JN9XLiaQ.ttf";
+
+export interface AcknowledgmentPdfInput {
+  /** The agreement wording — typically pasted from the handbook's last page. */
+  agreementText: string;
   /** Trainee's printed name (auto-filled from User.name). */
   printedName: string;
   /** Date string "MM/DD/YYYY". */
@@ -44,66 +43,112 @@ export interface StampHandbookInput {
 }
 
 /**
- * Fetches the source PDF, stamps the fields, returns a Buffer of the
- * modified PDF (entire document, last page modified in place).
+ * Wrap a single paragraph into lines that fit within CONTENT_W at the given
+ * font/size. Explicit newlines in the source are handled by the caller.
  */
-export async function stampHandbookPdf(input: StampHandbookInput): Promise<Buffer> {
-  // 1. Fetch source PDF
-  const res = await fetch(input.sourcePdfUrl);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch handbook PDF (${res.status}) from ${input.sourcePdfUrl}`);
+function wrapParagraph(text: string, font: PDFFont, size: number): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [""];
+  const lines: string[] = [];
+  let line = "";
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (font.widthOfTextAtSize(candidate, size) > CONTENT_W && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
   }
-  const srcBytes = new Uint8Array(await res.arrayBuffer());
+  if (line) lines.push(line);
+  return lines;
+}
 
-  // 2. Load + register fontkit (needed if we ever embed a custom font)
-  const pdf = await PDFDocument.load(srcBytes);
+/**
+ * Build a fresh acknowledgment PDF and return it as a Buffer.
+ */
+export async function generateAcknowledgmentPdf(
+  input: AcknowledgmentPdfInput
+): Promise<Buffer> {
+  const pdf = await PDFDocument.create();
   pdf.registerFontkit(fontkit);
 
-  // 3. Standard Helvetica for printed name + date
   const helv = await pdf.embedFont(StandardFonts.Helvetica);
 
-  const pages = pdf.getPages();
-  const lastPage = pages[pages.length - 1];
-  const { width: pageWidth, height: pageHeight } = lastPage.getSize();
-  // Coordinates are page-relative from bottom-left
-  void pageWidth;
-  void pageHeight;
+  let page: PDFPage = pdf.addPage([PAGE_W, PAGE_H]);
+  let y = PAGE_H - MARGIN;
 
-  // 4. Stamp inline PRINT NAME (top "I, ___, certify..." blank)
-  const inline = HANDBOOK_STAMP_LAYOUT.inlinePrintName;
-  lastPage.drawText(input.printedName, {
-    x: inline.x,
-    y: inline.y,
-    size: inline.fontSize,
+  const newPage = () => {
+    page = pdf.addPage([PAGE_W, PAGE_H]);
+    y = PAGE_H - MARGIN;
+  };
+
+  // ── Agreement body ─────────────────────────────────────────────────────
+  // Fill the trainee's name into any inline blank (a run of underscores),
+  // then preserve the author's explicit line breaks and wrap long lines.
+  const filledText = input.agreementText.replace(/_{3,}/g, input.printedName);
+  const sourceLines = filledText.replace(/\r\n/g, "\n").split("\n");
+  for (const sourceLine of sourceLines) {
+    if (sourceLine.trim() === "") {
+      y -= LINE_HEIGHT; // blank line = paragraph spacing
+      if (y < MARGIN) newPage();
+      continue;
+    }
+    const wrapped = wrapParagraph(sourceLine, helv, BODY_SIZE);
+    for (const line of wrapped) {
+      if (y < MARGIN + BODY_SIZE) newPage();
+      page.drawText(line, {
+        x: MARGIN,
+        y: y - BODY_SIZE,
+        size: BODY_SIZE,
+        font: helv,
+        color: rgb(0, 0, 0),
+      });
+      y -= LINE_HEIGHT;
+    }
+  }
+
+  // ── Signature block ────────────────────────────────────────────────────
+  // Ensure the whole block fits on the current page.
+  if (y < MARGIN + SIGNATURE_BLOCK_HEIGHT) newPage();
+  y -= 28;
+
+  // Printed Name (left) + Date (right) on the same row.
+  page.drawText(`Printed Name: ${input.printedName}`, {
+    x: MARGIN,
+    y: y - BODY_SIZE,
+    size: BODY_SIZE,
     font: helv,
     color: rgb(0, 0, 0),
-    maxWidth: inline.maxWidth,
   });
-
-  // 5. Stamp bottom PRINT NAME line
-  const pn = HANDBOOK_STAMP_LAYOUT.printNameLine;
-  lastPage.drawText(input.printedName, {
-    x: pn.x,
-    y: pn.y,
-    size: pn.fontSize,
+  page.drawText(`Date: ${input.dateString}`, {
+    x: PAGE_W - MARGIN - 150,
+    y: y - BODY_SIZE,
+    size: BODY_SIZE,
     font: helv,
     color: rgb(0, 0, 0),
-    maxWidth: pn.maxWidth,
   });
+  y -= 40;
 
-  // 6. Stamp DATE
-  const dt = HANDBOOK_STAMP_LAYOUT.dateLine;
-  lastPage.drawText(input.dateString, {
-    x: dt.x,
-    y: dt.y,
-    size: dt.fontSize,
+  // Signature label.
+  const labelBaselineY = y - BODY_SIZE;
+  page.drawText("Signature:", {
+    x: MARGIN,
+    y: labelBaselineY,
+    size: BODY_SIZE,
     font: helv,
     color: rgb(0, 0, 0),
-    maxWidth: dt.maxWidth,
   });
 
-  // 7. Stamp signature (image OR typed cursive text)
-  const sig = HANDBOOK_STAMP_LAYOUT.signatureLine;
+  // Signature rendering area, well below the label. The underline is fixed and
+  // the signature sits just above it; with sigMaxH bounded, even the tallest
+  // signature stays clear of the "Signature:" label above it.
+  const sigX = MARGIN;
+  const sigMaxW = 300;
+  const sigMaxH = 38;
+  const underlineY = labelBaselineY - 52; // clear gap below the label
+  const sigBottomY = underlineY + 4; // signature rests just above the line
+
   if (input.signature.kind === "drawn") {
     const base64 = input.signature.pngDataUrl.replace(
       /^data:image\/(png|jpe?g);base64,/,
@@ -111,41 +156,42 @@ export async function stampHandbookPdf(input: StampHandbookInput): Promise<Buffe
     );
     const imgBytes = Buffer.from(base64, "base64");
     const img = await pdf.embedPng(imgBytes);
-    // Scale image to fit within maxWidth/maxHeight while preserving aspect
-    const scale = Math.min(sig.maxWidth / img.width, sig.maxHeight / img.height);
-    const w = img.width * scale;
-    const h = img.height * scale;
-    lastPage.drawImage(img, {
-      x: sig.x,
-      y: sig.y,
-      width: w,
-      height: h,
+    const scale = Math.min(sigMaxW / img.width, sigMaxH / img.height);
+    page.drawImage(img, {
+      x: sigX,
+      y: sigBottomY,
+      width: img.width * scale,
+      height: img.height * scale,
     });
   } else {
-    // Typed signature — use a cursive font. Great Vibes is loaded server-side
-    // from a known Google Fonts CDN URL at build/runtime (no font file ships).
-    const fontUrl = "https://fonts.gstatic.com/s/greatvibes/v18/RWmMoKWR9v4ksMfaWd_JN9XLiaQ.ttf";
-    let cursive;
+    // Typed signature — Great Vibes cursive, fetched at runtime (no font ships).
+    let cursive: PDFFont | undefined;
     try {
-      const fontRes = await fetch(fontUrl);
+      const fontRes = await fetch(GREAT_VIBES_URL);
       if (fontRes.ok) {
-        const fontBytes = await fontRes.arrayBuffer();
-        cursive = await pdf.embedFont(fontBytes);
+        cursive = await pdf.embedFont(await fontRes.arrayBuffer());
       }
     } catch {
-      // Fall through to italic Helvetica if the CDN is unreachable.
+      // Fall back to italic Helvetica if the CDN is unreachable.
     }
     const font = cursive ?? (await pdf.embedFont(StandardFonts.HelveticaOblique));
-    const size = 24;
-    lastPage.drawText(input.signature.text, {
-      x: sig.x,
-      y: sig.y + 4,
-      size,
+    page.drawText(input.signature.text, {
+      x: sigX,
+      y: sigBottomY + 2,
+      size: 24,
       font,
       color: rgb(0, 0, 0),
-      maxWidth: sig.maxWidth,
+      maxWidth: sigMaxW,
     });
   }
+
+  // Underline beneath the signature.
+  page.drawLine({
+    start: { x: sigX, y: underlineY },
+    end: { x: sigX + sigMaxW, y: underlineY },
+    thickness: 0.5,
+    color: rgb(0.6, 0.6, 0.6),
+  });
 
   const outBytes = await pdf.save();
   return Buffer.from(outBytes);

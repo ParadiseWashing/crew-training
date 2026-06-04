@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/toast";
-import { Plus, BookOpen, RotateCcw } from "lucide-react";
+import { Plus, BookOpen, RotateCcw, Trash2 } from "lucide-react";
 
 interface SubjectSummary {
   id: string;
@@ -246,6 +246,90 @@ export function ResetProgressButton({
           <Button variant="destructive" loading={loading} onClick={handleReset}>
             <RotateCcw className="h-3.5 w-3.5" />
             Reset Progress
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Reset / Delete Signature Button ──────────────────────────────────────────
+
+interface ResetSignatureButtonProps {
+  signatureId: string;
+  userName: string;
+  documentTitle: string;
+}
+
+export function ResetSignatureButton({
+  signatureId,
+  userName,
+  documentTitle,
+}: ResetSignatureButtonProps) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [open, setOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+
+  async function handleDelete() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/handbook-signatures/${signatureId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Failed to delete signature");
+      }
+      toast("Signature deleted — step re-opened for signing", "success");
+      setOpen(false);
+      router.refresh();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Something went wrong", "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button
+          size="sm"
+          variant="outline"
+          className="text-gray-600 hover:text-red-600 hover:border-red-200"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          Reset
+        </Button>
+      </DialogTrigger>
+      <DialogContent size="sm">
+        <DialogHeader>
+          <DialogTitle>Delete signature & reset?</DialogTitle>
+          <DialogDescription asChild>
+            <div className="space-y-3 text-sm text-gray-600">
+              <p>
+                This will delete{" "}
+                <span className="font-semibold text-gray-900">{userName}</span>&rsquo;s
+                signed{" "}
+                <span className="font-semibold text-gray-900">{documentTitle}</span> and
+                re-open that signature step so they can sign again.
+              </p>
+              <p className="text-xs text-red-600 font-medium">
+                The signed PDF will be permanently removed. This cannot be undone.
+              </p>
+            </div>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="outline">
+              Cancel
+            </Button>
+          </DialogClose>
+          <Button variant="destructive" loading={loading} onClick={handleDelete}>
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete & Reset
           </Button>
         </DialogFooter>
       </DialogContent>

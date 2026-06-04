@@ -111,34 +111,30 @@ export default async function SubjectViewerPage({ params, searchParams }: PagePr
 
   // If the active step is a SIGNATURE step, pre-resolve its data
   let signatureStepData: {
-    pdfUrl: string | null;
     agreementText: string;
     alreadySigned: boolean;
     signedAt: string | null;
-    driveWebLink: string | null;
+    signedPdfDownloadUrl: string | null;
   } | null = null;
 
   if (activeStep && activeStep.stepType === "SIGNATURE") {
     const content = (activeStep.content ?? {}) as {
-      pdfUrl?: string;
       agreementText?: string;
     };
     const existingSig = await prisma.handbookSignature.findFirst({
       where: { userId: session.user.id, stepId: activeStep.id },
       orderBy: { signedAt: "desc" },
-      select: { signedAt: true, driveFileId: true },
+      select: { id: true, signedAt: true },
     });
-    const driveWebLink = existingSig?.driveFileId
-      ? `https://drive.google.com/file/d/${existingSig.driveFileId}/view`
-      : null;
     signatureStepData = {
-      pdfUrl: content.pdfUrl ?? null,
       agreementText:
         content.agreementText ??
         "I acknowledge that I have read, understood, and agree to abide by the policies, procedures, and rules set forth in the Paradise Washing Employee Handbook. I understand that violations may result in disciplinary action up to and including termination.",
       alreadySigned: Boolean(existingSig),
       signedAt: existingSig?.signedAt.toISOString() ?? null,
-      driveWebLink,
+      signedPdfDownloadUrl: existingSig
+        ? `/api/handbook-signatures/${existingSig.id}/pdf`
+        : null,
     };
   }
 

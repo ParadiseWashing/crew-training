@@ -66,11 +66,10 @@ interface SubjectViewerClientProps {
   activeStepType: "CONTENT" | "PDF" | "SIGNATURE" | null;
   /** Pre-resolved signature step data, only present when activeStepType=SIGNATURE. */
   signatureStepData?: {
-    pdfUrl: string | null;
     agreementText: string;
     alreadySigned: boolean;
     signedAt: string | null;
-    driveWebLink: string | null;
+    signedPdfDownloadUrl: string | null;
   } | null;
   activeStepTitle: string | null;
   allStepsComplete: boolean;
@@ -969,8 +968,9 @@ export function SubjectViewerClient({
   const completionPct = totalSteps > 0 ? Math.round((doneSteps / totalSteps) * 100) : 0;
 
   // ── Reading timer ───────────────────────────────────────────────────────
-  // PDF steps don't have rich text — skip the reading-time gate entirely.
-  const readingTime = isPdfStep ? 0 : estimatedReadingSeconds(activeStepContent);
+  // PDF + signature steps don't have rich text — skip the reading-time gate.
+  const readingTime =
+    isPdfStep || isSignatureStep ? 0 : estimatedReadingSeconds(activeStepContent);
   const [timeOnPage, setTimeOnPage] = React.useState(0);
 
   // ── PDF "opened" gate (replaces scroll/reading/video gates for PDF steps) ─
@@ -1037,7 +1037,9 @@ export function SubjectViewerClient({
   const allVideosDone = completedUrls.size >= videoUrls.length;
   const canComplete = isPdfStep
     ? Boolean(pdfFileUrl) && pdfOpened // PDF gate: file uploaded AND iframe loaded at least once
-    : readingDone && scrolledToBottom && allVideosDone;
+    : isSignatureStep
+      ? false // signature steps complete only via the in-page Submit Signature button
+      : readingDone && scrolledToBottom && allVideosDone;
 
   // Active topic
   const activeTopic = activeStepId
@@ -1478,11 +1480,10 @@ export function SubjectViewerClient({
                       <SignatureStepView
                         stepId={activeStepId!}
                         userName={userName}
-                        pdfUrl={signatureStepData.pdfUrl}
                         agreementText={signatureStepData.agreementText}
                         alreadySigned={signatureStepData.alreadySigned}
                         signedAt={signatureStepData.signedAt}
-                        driveWebLink={signatureStepData.driveWebLink}
+                        signedPdfDownloadUrl={signatureStepData.signedPdfDownloadUrl}
                       />
                     ) : (
                       <ContentRenderer content={activeStepContent} />

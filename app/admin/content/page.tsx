@@ -63,7 +63,7 @@ export default async function ContentPage() {
           return (
             <Card key={subject.id} className="overflow-hidden flex flex-col group hover:shadow-md transition-shadow">
               {/* Cover image / gradient placeholder */}
-              <div className={`relative h-32 bg-gradient-to-br ${gradient} flex items-end p-4`}>
+              <div className={`relative aspect-[3/1] bg-gradient-to-br ${gradient} flex items-end p-4`}>
                 <div className="absolute inset-0 bg-black/10" />
                 {subject.coverImage ? (
                   // eslint-disable-next-line @next/next/no-img-element

@@ -385,6 +385,8 @@ model HandbookSignature {
   pdfSourceUrl      String?
   // Backup copy on UploadThing in case the Drive file is deleted/moved
   signedPdfUrl      String?
+  // The generated signed acknowledgment PDF, retained in-app for download.
+  signedPdfData     Bytes?
 
   @@index([userId])
   @@index([stepId])

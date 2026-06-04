@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar } from "@/components/ui/avatar";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { PdfSaveMenu } from "@/components/ui/pdf-save-menu";
 import { formatDate, statusLabel } from "@/lib/utils";
 import {
   BookOpen,
@@ -17,8 +18,13 @@ import {
   Award,
   ArrowLeft,
   ShieldCheck,
+  PenLine,
 } from "lucide-react";
-import { AssignSubjectButton, ResetProgressButton } from "./user-detail-client";
+import {
+  AssignSubjectButton,
+  ResetProgressButton,
+  ResetSignatureButton,
+} from "./user-detail-client";
 
 export default async function UserDetailPage({
   params,
@@ -66,6 +72,25 @@ export default async function UserDetailPage({
         },
         signOffs: { include: { subject: { select: { id: true, title: true } } } },
         stepProgress: { select: { stepId: true } },
+        handbookSignatures: {
+          orderBy: { signedAt: "desc" },
+          select: {
+            id: true,
+            signedAt: true,
+            signatureMethod: true,
+            step: {
+              select: {
+                title: true,
+                topic: {
+                  select: {
+                    title: true,
+                    subject: { select: { id: true, title: true } },
+                  },
+                },
+              },
+            },
+          },
+        },
       },
     }),
     prisma.subject.findMany({
@@ -197,6 +222,9 @@ export default async function UserDetailPage({
         <TabsList>
           <TabsTrigger value="progress">Training Progress</TabsTrigger>
           <TabsTrigger value="quiz-history">Quiz History ({allAttempts.length})</TabsTrigger>
+          <TabsTrigger value="signatures">
+            Signatures ({user.handbookSignatures.length})
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Training Progress Tab ── */}
@@ -431,6 +459,58 @@ export default async function UserDetailPage({
                     ))}
                   </div>
                 </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Handbook Signatures Tab ── */}
+        <TabsContent value="signatures">
+          <Card>
+            <CardContent className="p-0">
+              {user.handbookSignatures.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                    <PenLine className="h-6 w-6 text-gray-400" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-900 mb-1">
+                    No signed documents yet
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    Signed acknowledgements will appear here once this person completes a
+                    signature step.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-gray-100">
+                  {user.handbookSignatures.map((sig) => (
+                    <div
+                      key={sig.id}
+                      className="flex items-center justify-between gap-3 px-6 py-4"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {sig.step.title}
+                        </p>
+                        <p className="text-xs text-gray-400 truncate">
+                          {sig.step.topic.subject.title} · {sig.step.topic.title} ·
+                          Signed {formatDate(sig.signedAt)} ·{" "}
+                          {sig.signatureMethod === "DRAWN" ? "Drawn" : "Typed"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <PdfSaveMenu
+                          downloadUrl={`/api/handbook-signatures/${sig.id}/pdf`}
+                        />
+                        <ResetSignatureButton
+                          signatureId={sig.id}
+                          userName={user.name}
+                          documentTitle={sig.step.title}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </CardContent>
           </Card>

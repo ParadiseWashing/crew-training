@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { stampHandbookPdf, buildSignatureFilename } from "@/lib/handbook-signing";
-import { uploadPdfToDrive } from "@/lib/google-drive";
+import { generateAcknowledgmentPdf, buildSignatureFilename } from "@/lib/handbook-signing";
 
 // ─── POST /api/handbook-signatures ───────────────────────────────────────────
 // Trainee submits a signature. Server:
 //   1. Validates the step is a SIGNATURE step
-//   2. Fetches the source handbook PDF + stamps the last page
-//   3. Uploads the resulting PDF to the configured Google Drive folder
-//   4. Records a HandbookSignature audit row (regardless of Drive success)
-//   5. Returns Drive link + audit row id
+//   2. Generates a fresh acknowledgment PDF from the step's agreement text
+//      + the trainee's name, date, and signature
+//   3. Records a HandbookSignature audit row with the signed PDF retained
+//      in-app (signedPdfData) for download
+//   4. Returns the audit row id + a download URL
 
 interface Body {
   stepId: string;
@@ -66,12 +66,12 @@ export async function POST(req: NextRequest) {
   }
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
 
-  // Step.content carries the source PDF URL (set when admin created the step).
-  const content = (step.content ?? {}) as { pdfUrl?: string };
-  const pdfUrl = content.pdfUrl;
-  if (!pdfUrl) {
+  // Step.content carries the agreement text (set when admin created the step).
+  const content = (step.content ?? {}) as { agreementText?: string };
+  const agreementText = content.agreementText?.trim();
+  if (!agreementText) {
     return NextResponse.json(
-      { error: "This signature step has no source PDF configured. Ask an admin to set the PDF URL." },
+      { error: "This signature step has no agreement text configured. Ask an admin to set it." },
       { status: 400 }
     );
   }
@@ -79,31 +79,24 @@ export async function POST(req: NextRequest) {
   const signedAt = new Date();
   const dateString = `${String(signedAt.getMonth() + 1).padStart(2, "0")}/${String(signedAt.getDate()).padStart(2, "0")}/${signedAt.getFullYear()}`;
 
-  // Stamp the PDF
+  // Generate the acknowledgment PDF
   let pdfBuffer: Buffer;
   try {
-    pdfBuffer = await stampHandbookPdf({
-      sourcePdfUrl: pdfUrl,
+    pdfBuffer = await generateAcknowledgmentPdf({
+      agreementText,
       printedName: user.name,
       dateString,
       signature: body.signature,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[handbook-signatures] stamp error:", msg);
-    return NextResponse.json({ error: `Stamping failed: ${msg}` }, { status: 500 });
+    console.error("[handbook-signatures] pdf generation error:", msg);
+    return NextResponse.json({ error: `PDF generation failed: ${msg}` }, { status: 500 });
   }
 
   const filename = buildSignatureFilename({ userName: user.name, signedAt });
 
-  // Upload to Drive
-  const driveResult = await uploadPdfToDrive({ filename, pdfBuffer });
-  const driveFileId = "fileId" in driveResult ? driveResult.fileId : null;
-  const driveFileName = "fileName" in driveResult ? driveResult.fileName : null;
-  const driveWebLink = "webViewLink" in driveResult ? driveResult.webViewLink : null;
-  const driveError = "error" in driveResult ? driveResult.error : null;
-
-  // Audit row — always recorded, even if Drive failed
+  // Audit row — the signed PDF is retained in-app (signedPdfData) for download.
   const audit = await prisma.handbookSignature.create({
     data: {
       userId: user.id,
@@ -113,14 +106,13 @@ export async function POST(req: NextRequest) {
       signatureMethod: body.signature.kind === "drawn" ? "DRAWN" : "TYPED",
       typedSignatureText:
         body.signature.kind === "typed" ? body.signature.text : null,
-      driveFileId,
-      driveFileName,
+      signedPdfData: new Uint8Array(pdfBuffer),
       ipAddress:
         req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
         req.headers.get("x-real-ip") ||
         null,
       userAgent: req.headers.get("user-agent") ?? null,
-      pdfSourceUrl: pdfUrl,
+      pdfSourceUrl: null,
     },
   });
 
@@ -141,8 +133,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     success: true,
     auditId: audit.id,
-    driveFileId,
-    driveWebLink,
-    driveError,
+    downloadUrl: `/api/handbook-signatures/${audit.id}/pdf`,
+    filename,
   });
 }
