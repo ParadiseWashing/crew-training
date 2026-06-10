@@ -268,7 +268,10 @@ function extractYouTubeUrls(node: TiptapNode): string[] {
 }
 
 function getYouTubeVideoId(url: string): string {
-  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\n?#]+)/);
+  // Handles watch?v=, embed/, shorts/, live/ and youtu.be/ forms.
+  const m = url.match(
+    /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([^&?#/\s]+)/
+  );
   return m ? m[1] : "";
 }
 
