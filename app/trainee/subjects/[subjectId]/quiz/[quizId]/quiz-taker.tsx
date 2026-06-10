@@ -16,6 +16,7 @@ import {
   Trophy,
   RotateCcw,
   ChevronLeft,
+  ChevronRight,
   RefreshCw,
 } from "lucide-react";
 
@@ -50,6 +51,8 @@ interface QuizTakerProps {
   questions: QuizQuestion[];
   existingAttempts: QuizAttemptRecord[];
   correctAnswerMap: Record<string, unknown>;
+  /** Link to the next topic's first step, or null if this is the last topic. */
+  nextStepHref: string | null;
 }
 
 type AnswerMap = Record<string, string | string[]>;
@@ -340,6 +343,7 @@ function ResultsView({
   onRetake,
   subjectId,
   moduleReset,
+  nextStepHref,
 }: {
   score: number;
   passed: boolean;
@@ -354,6 +358,7 @@ function ResultsView({
   onRetake: () => void;
   subjectId: string;
   moduleReset: boolean;
+  nextStepHref: string | null;
 }) {
   const attemptsRemaining = maxAttempts - attemptsUsed;
   const canRetake = attemptsRemaining > 0 && !passed && !moduleReset;
@@ -453,6 +458,14 @@ function ResultsView({
             </span>
           </Button>
         )}
+        {passed && nextStepHref && (
+          <Link href={nextStepHref}>
+            <Button variant="default" size="md" className="gap-2">
+              Next Section
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Question breakdown */}
@@ -489,6 +502,7 @@ export function QuizTaker({
   questions,
   existingAttempts,
   correctAnswerMap,
+  nextStepHref,
 }: QuizTakerProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -611,12 +625,22 @@ export function QuizTaker({
             <p className="text-xs text-gray-500 mt-2">{formatDate(passedAttempt.takenAt)}</p>
           </CardContent>
         </Card>
-        <Link href={`/trainee/subjects/${subjectId}`}>
-          <Button variant="outline" size="md" className="gap-2">
-            <ChevronLeft className="h-4 w-4" />
-            Back to Subject
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3 flex-wrap">
+          <Link href={`/trainee/subjects/${subjectId}`}>
+            <Button variant="outline" size="md" className="gap-2">
+              <ChevronLeft className="h-4 w-4" />
+              Back to Subject
+            </Button>
+          </Link>
+          {nextStepHref && (
+            <Link href={nextStepHref}>
+              <Button variant="default" size="md" className="gap-2">
+                Next Section
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
     );
   }
@@ -670,6 +694,7 @@ export function QuizTaker({
         onRetake={handleRetake}
         subjectId={subjectId}
         moduleReset={moduleReset}
+        nextStepHref={nextStepHref}
       />
     );
   }

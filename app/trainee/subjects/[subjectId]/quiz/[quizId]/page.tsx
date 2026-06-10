@@ -40,6 +40,23 @@ export default async function QuizPage({ params }: PageProps) {
 
   if (!quiz) notFound();
 
+  // Find the first step of the next topic, so a passed quiz can offer a
+  // "Next Section" button to keep moving through the module.
+  const topicsOrdered = await prisma.topic.findMany({
+    where: { subjectId },
+    orderBy: { orderIndex: "asc" },
+    select: {
+      id: true,
+      steps: { orderBy: { orderIndex: "asc" }, select: { id: true }, take: 1 },
+    },
+  });
+  const currentIdx = topicsOrdered.findIndex((t) => t.id === quiz.topicId);
+  const nextStepId =
+    currentIdx >= 0 ? topicsOrdered[currentIdx + 1]?.steps[0]?.id ?? null : null;
+  const nextStepHref = nextStepId
+    ? `/trainee/subjects/${subjectId}?step=${nextStepId}`
+    : null;
+
   // Strip correct answers before sending to client
   const questionsForClient = quiz.questions.map((q) => ({
     id: q.id,
@@ -88,6 +105,7 @@ export default async function QuizPage({ params }: PageProps) {
         questions={questionsForClient}
         existingAttempts={attemptsForClient}
         correctAnswerMap={correctAnswerMap as Record<string, unknown>}
+        nextStepHref={nextStepHref}
       />
     </div>
   );
