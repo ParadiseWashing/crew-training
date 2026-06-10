@@ -364,10 +364,11 @@ function ResultsView({
         <Card className="border-2 border-red-200 bg-red-50">
           <CardContent className="pt-8 pb-8 text-center">
             <RefreshCw className="h-12 w-12 text-red-400 mx-auto mb-3" />
-            <h2 className="text-xl font-bold text-red-800 mb-2">Module Reset</h2>
+            <h2 className="text-xl font-bold text-red-800 mb-2">Section Reset</h2>
             <p className="text-red-700 text-sm mb-4 max-w-sm mx-auto">
               You&apos;ve used all {maxAttempts} attempts without passing. Your progress on this
-              module has been reset — you&apos;ll need to re-read all steps and retake the quiz.
+              section has been reset — you&apos;ll need to re-read this section&apos;s steps and
+              retake the quiz. Your other completed sections are unaffected.
             </p>
             <p className="text-xs text-gray-500">Contact your manager if you have questions.</p>
           </CardContent>
@@ -375,7 +376,7 @@ function ResultsView({
         <Link href={`/trainee/subjects/${subjectId}`}>
           <Button variant="default" size="md" className="gap-2">
             <RefreshCw className="h-4 w-4" />
-            Restart Module
+            Back to Training
           </Button>
         </Link>
       </div>

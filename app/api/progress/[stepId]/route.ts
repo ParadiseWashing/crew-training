@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// Rough estimate: 200 words/min reading speed
+// Rough estimate: ~400 words/min reading speed (kept in sync with the
+// client reading gate, which was halved from the prior 200 wpm pace).
 function estimatedReadingSeconds(content: unknown): number {
   if (!content || typeof content !== "object") return 0;
   const text = JSON.stringify(content);
   // Extract word-like tokens from the JSON text values
   const words = text.match(/[a-zA-Z]{2,}/g)?.length ?? 0;
-  return Math.max(Math.ceil((words / 200) * 60), 15);
+  return Math.max(Math.ceil((words / 400) * 60), 8);
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ stepId: string }> }) {
@@ -53,7 +54,31 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ste
 
     const total = allStepIds.length;
     const percentage = total > 0 ? Math.round((completedCount / total) * 100) : 0;
-    const status = percentage === 0 ? "NOT_STARTED" : percentage === 100 ? "COMPLETED" : "IN_PROGRESS";
+
+    // The subject is only COMPLETED when all steps are done AND every topic
+    // quiz has been passed — otherwise it stays IN_PROGRESS.
+    let allQuizzesPassed = true;
+    if (percentage === 100) {
+      const quizzes = await prisma.quiz.findMany({
+        where: { topic: { subjectId: subject.id } },
+        select: {
+          id: true,
+          attempts: {
+            where: { userId: session.user.id, passed: true },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      });
+      allQuizzesPassed = quizzes.every((q) => q.attempts.length > 0);
+    }
+
+    const status =
+      percentage === 0
+        ? "NOT_STARTED"
+        : percentage === 100 && allQuizzesPassed
+          ? "COMPLETED"
+          : "IN_PROGRESS";
 
     await prisma.assignment.updateMany({
       where: { userId: session.user.id, subjectId: subject.id },

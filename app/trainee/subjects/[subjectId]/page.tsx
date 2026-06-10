@@ -55,12 +55,54 @@ export default async function SubjectViewerPage({ params, searchParams }: PagePr
   });
   const completedStepIds = new Set(completedProgress.map((p) => p.stepId));
 
-  // Determine the default step if none selected
   const allSteps = subject.topics.flatMap((t) =>
     t.steps.map((s) => ({ ...s, topicId: t.id }))
   );
-  const firstIncomplete = allSteps.find((s) => !completedStepIds.has(s.id));
-  const resolvedStepId = activeStepId ?? firstIncomplete?.id ?? allSteps[0]?.id ?? null;
+
+  // ── Navigation lock (server-enforced) ──────────────────────────────────────
+  // A step is locked if a prior step is incomplete OR a prior topic's quiz has
+  // not been passed. `safeTarget` is the furthest step the user is allowed to be
+  // on (their current frontier). This mirrors the client lock and is enforced
+  // here so a trainee can't jump ahead by editing the URL.
+  const lockedSet = new Set<string>();
+  let blocked = false;
+  let safeTarget: string | null = null;
+  let frontierResolved = false;
+  for (const t of subject.topics) {
+    for (const s of t.steps) {
+      if (blocked) {
+        lockedSet.add(s.id);
+        continue;
+      }
+      if (!completedStepIds.has(s.id)) {
+        if (!frontierResolved) {
+          safeTarget = s.id; // first incomplete reachable step
+          frontierResolved = true;
+        }
+        blocked = true;
+      }
+    }
+    const quizPassed = t.quiz?.attempts.some((a) => a.passed) ?? false;
+    if (!blocked && t.quiz && !quizPassed) {
+      if (!frontierResolved) {
+        // All this topic's steps are done; the quiz is the frontier. Park them
+        // on the topic's last step where the "Take Quiz" prompt is shown.
+        safeTarget = t.steps[t.steps.length - 1]?.id ?? null;
+        frontierResolved = true;
+      }
+      blocked = true;
+    }
+  }
+
+  const resolvedStepId =
+    activeStepId ?? safeTarget ?? allSteps[allSteps.length - 1]?.id ?? null;
+
+  // Block direct access to a locked step — bounce to the frontier.
+  if (resolvedStepId && lockedSet.has(resolvedStepId)) {
+    redirect(
+      `/trainee/subjects/${subjectId}${safeTarget ? `?step=${safeTarget}` : ""}`
+    );
+  }
 
   const activeStep = allSteps.find((s) => s.id === resolvedStepId) ?? null;
 

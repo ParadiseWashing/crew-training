@@ -80,8 +80,34 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ qui
   });
 
   const subject = quiz.topic.subject;
-  const allQuizIds = subject.topics.flatMap((t) => (t.quiz ? [t.quiz.id] : []));
   const allStepIds = subject.topics.flatMap((t) => t.steps.map((s) => s.id));
+
+  // Passing a quiz can be the last requirement for finishing the subject:
+  // if all steps are done and every topic quiz is now passed, mark it COMPLETED.
+  if (passed) {
+    const completedSteps = await prisma.stepProgress.count({
+      where: { userId: session.user.id, stepId: { in: allStepIds } },
+    });
+    if (allStepIds.length > 0 && completedSteps === allStepIds.length) {
+      const quizzes = await prisma.quiz.findMany({
+        where: { topic: { subjectId: subject.id } },
+        select: {
+          id: true,
+          attempts: {
+            where: { userId: session.user.id, passed: true },
+            select: { id: true },
+            take: 1,
+          },
+        },
+      });
+      if (quizzes.every((q) => q.attempts.length > 0)) {
+        await prisma.assignment.updateMany({
+          where: { userId: session.user.id, subjectId: subject.id },
+          data: { status: "COMPLETED", progressPercentage: 100, completedAt: new Date() },
+        });
+      }
+    }
+  }
 
   // ── Audit flags ───────────────────────────────────────────────────────────
 
@@ -127,15 +153,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ qui
     }
   }
 
-  // ── Module reset on final failed attempt ──────────────────────────────────
+  // ── Topic reset on final failed attempt ───────────────────────────────────
+  // Failing all attempts on a topic's quiz resets ONLY that topic (its step
+  // progress + its quiz attempts), so the trainee re-does that section with a
+  // fresh set of attempts. Other completed topics are preserved.
   if (!passed && attemptNum >= quiz.maxAttempts) {
-    // Save attempt history for audit before deleting
-    const allAttemptsHistory = await prisma.quizAttempt.findMany({
-      where: { quizId: { in: allQuizIds }, userId: session.user.id },
-      select: { quizId: true, score: true, attemptNum: true, timeTakenSeconds: true, passed: true, takenAt: true },
+    const thisTopic = subject.topics.find((t) => t.id === quiz.topicId);
+    const topicStepIds = thisTopic ? thisTopic.steps.map((s) => s.id) : [];
+
+    // Save this topic's attempt history for audit before deleting
+    const attemptHistory = await prisma.quizAttempt.findMany({
+      where: { quizId, userId: session.user.id },
+      select: { score: true, attemptNum: true, timeTakenSeconds: true, passed: true, takenAt: true },
     });
 
-    // Flag the module reset
     await prisma.trainingAuditFlag.create({
       data: {
         userId: session.user.id,
@@ -144,27 +175,34 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ qui
         topicId: quiz.topicId,
         quizId,
         details: {
-          reason: "Failed all quiz attempts — module reset",
+          reason: "Failed all quiz attempts — topic reset",
           subjectTitle: subject.title,
-          attemptHistory: allAttemptsHistory,
+          topicTitle: quiz.topic.title,
+          attemptHistory,
         },
       },
     });
 
-    // Delete all step progress for this subject
+    // Reset just this topic: its step progress + its quiz attempts
     await prisma.stepProgress.deleteMany({
+      where: { userId: session.user.id, stepId: { in: topicStepIds } },
+    });
+    await prisma.quizAttempt.deleteMany({
+      where: { userId: session.user.id, quizId },
+    });
+
+    // Recompute the subject assignment's progress after the partial reset
+    const remaining = await prisma.stepProgress.count({
       where: { userId: session.user.id, stepId: { in: allStepIds } },
     });
-
-    // Delete all quiz attempts for this subject's quizzes
-    await prisma.quizAttempt.deleteMany({
-      where: { userId: session.user.id, quizId: { in: allQuizIds } },
-    });
-
-    // Reset assignment
+    const pct = allStepIds.length > 0 ? Math.round((remaining / allStepIds.length) * 100) : 0;
     await prisma.assignment.updateMany({
       where: { userId: session.user.id, subjectId: subject.id },
-      data: { status: "NOT_STARTED", progressPercentage: 0, completedAt: null },
+      data: {
+        status: remaining > 0 ? "IN_PROGRESS" : "NOT_STARTED",
+        progressPercentage: pct,
+        completedAt: null,
+      },
     });
 
     return NextResponse.json({

@@ -249,7 +249,9 @@ function countWords(node: TiptapNode): number {
 function estimatedReadingSeconds(content: object | null): number {
   if (!content) return 0;
   const words = countWords(content as TiptapNode);
-  return Math.max(Math.ceil((words / 200) * 60), 15);
+  // Reading gate at ~400 wpm (half the prior 200 wpm pace) with an 8s floor,
+  // i.e. roughly 50% less wait time than before.
+  return Math.max(Math.ceil((words / 400) * 60), 8);
 }
 
 function extractYouTubeUrls(node: TiptapNode): string[] {
@@ -938,13 +940,17 @@ export function SubjectViewerClient({
 
   const lockedStepIds = React.useMemo(() => {
     const locked = new Set<string>();
-    let anyPreviousIncomplete = false;
-    for (const step of allStepsOrdered) {
-      if (anyPreviousIncomplete) locked.add(step.id);
-      if (!step.completed) anyPreviousIncomplete = true;
+    let blocked = false;
+    for (const topic of orderedTopics) {
+      for (const step of topic.steps) {
+        if (blocked) locked.add(step.id);
+        if (!step.completed) blocked = true;
+      }
+      // A topic's quiz must be PASSED before any later topic unlocks.
+      if (!blocked && topic.quiz && !topic.quiz.passed) blocked = true;
     }
     return locked;
-  }, [allStepsOrdered]);
+  }, [orderedTopics]);
 
   // Prev/next nav
   const currentIdx = activeStepId
