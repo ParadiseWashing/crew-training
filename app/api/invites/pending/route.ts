@@ -25,7 +25,7 @@ export async function GET() {
       name: true,
       email: true,
       inviteToken: true,
-      inviteExpires: true,
+      invitedAt: true,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -36,7 +36,7 @@ export async function GET() {
       name: u.name,
       email: u.email,
       inviteUrl: `${baseUrl}/invite/${u.inviteToken}`,
-      inviteExpires: u.inviteExpires?.toISOString() ?? null,
+      invitedAt: u.invitedAt?.toISOString() ?? null,
     }))
   );
 }

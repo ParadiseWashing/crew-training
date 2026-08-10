@@ -54,7 +54,8 @@ model User {
   passwordHash  String?
   inviteToken   String?        @unique
   inviteStatus  InviteStatus   @default(ACCEPTED)
-  inviteExpires DateTime?
+  invitedAt     DateTime?
+  activatedAt   DateTime?
   systemRole    SystemRole     @default(TRAINEE)
   jobRoleId     String?
   jobRole       JobRole?       @relation("UserPrimaryJobRole", fields: [jobRoleId], references: [id])
@@ -83,6 +84,7 @@ enum SystemRole {
 enum InviteStatus {
   PENDING
   ACCEPTED
+  CANCELLED
 }
 
 model JobRole {

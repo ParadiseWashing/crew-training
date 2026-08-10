@@ -8,7 +8,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ token:
 
   const user = await prisma.user.findUnique({
     where: { inviteToken: token },
-    select: { name: true, email: true, inviteStatus: true, inviteExpires: true },
+    select: { name: true, email: true, inviteStatus: true },
   });
 
   if (!user) {
@@ -17,8 +17,8 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ token:
   if (user.inviteStatus === "ACCEPTED") {
     return NextResponse.json({ error: "This invite has already been used" }, { status: 410 });
   }
-  if (user.inviteExpires && user.inviteExpires < new Date()) {
-    return NextResponse.json({ error: "This invite has expired" }, { status: 410 });
+  if (user.inviteStatus === "CANCELLED") {
+    return NextResponse.json({ error: "This invite has been cancelled" }, { status: 410 });
   }
 
   return NextResponse.json({ name: user.name, email: user.email });
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
 
   const user = await prisma.user.findUnique({
     where: { inviteToken: token },
-    select: { id: true, inviteStatus: true, inviteExpires: true },
+    select: { id: true, inviteStatus: true },
   });
 
   if (!user) {
@@ -44,8 +44,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   if (user.inviteStatus === "ACCEPTED") {
     return NextResponse.json({ error: "This invite has already been used" }, { status: 410 });
   }
-  if (user.inviteExpires && user.inviteExpires < new Date()) {
-    return NextResponse.json({ error: "This invite has expired" }, { status: 410 });
+  if (user.inviteStatus === "CANCELLED") {
+    return NextResponse.json({ error: "This invite has been cancelled" }, { status: 410 });
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       passwordHash,
       inviteStatus: "ACCEPTED",
       inviteToken: null,
-      inviteExpires: null,
+      activatedAt: new Date(),
       emailVerified: new Date(),
     },
   });

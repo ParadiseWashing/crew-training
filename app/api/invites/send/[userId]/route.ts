@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
+import { randomBytes } from "crypto";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendInviteEmail } from "@/lib/email";
@@ -11,8 +12,10 @@ function buildBaseUrl(host: string | null, proto: string | null): string {
 }
 
 // POST /api/invites/send/[userId]
-// Sends an invite email to one specific user. Admin-only. The user must still
-// be in PENDING status and have an inviteToken; otherwise this is a no-op error.
+// Sends (or re-sends) an invite email to one specific user. Admin-only. Works
+// for users who are still PENDING as well as those whose invite was CANCELLED —
+// in the cancelled case a fresh token is generated and the user is set back to
+// PENDING. Only ACCEPTED (already activated) users are rejected.
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ userId: string }> }
@@ -38,11 +41,22 @@ export async function POST(
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
-  if (user.inviteStatus !== "PENDING" || !user.inviteToken) {
+  if (user.inviteStatus === "ACCEPTED") {
     return NextResponse.json(
-      { error: "This user has already accepted their invite or has no pending invite." },
+      { error: "This user has already activated their account." },
       { status: 400 }
     );
+  }
+
+  // Ensure the user has a valid pending invite. If their invite was cancelled
+  // (token cleared), regenerate one and flip them back to PENDING.
+  let inviteToken = user.inviteToken;
+  if (user.inviteStatus !== "PENDING" || !inviteToken) {
+    inviteToken = randomBytes(32).toString("hex");
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { inviteToken, inviteStatus: "PENDING", invitedAt: new Date() },
+    });
   }
 
   const h = await headers();
@@ -51,7 +65,7 @@ export async function POST(
   const result = await sendInviteEmail({
     recipientName: user.name,
     recipientEmail: user.email,
-    inviteUrl: `${baseUrl}/invite/${user.inviteToken}`,
+    inviteUrl: `${baseUrl}/invite/${inviteToken}`,
   });
 
   const emailEnabled = process.env.EMAIL_ENABLED === "true";

@@ -18,6 +18,7 @@ import {
   DeleteJobRoleButton,
   SendInvitesButton,
   SendIndividualInviteButton,
+  CancelInviteButton,
 } from "./people-client";
 
 export default async function PeoplePage() {
@@ -128,13 +129,26 @@ export default async function PeoplePage() {
                               >
                                 {user.name}
                               </Link>
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="text-xs text-gray-400">
                                   {user.systemRole === "ADMIN" ? "Admin" : "Trainee"}
                                 </span>
                                 {user.inviteStatus === "PENDING" && (
                                   <span className="text-[10px] font-semibold uppercase tracking-wide text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">
                                     Invite Pending
+                                  </span>
+                                )}
+                                {user.inviteStatus === "CANCELLED" && (
+                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
+                                    Invite Cancelled
+                                  </span>
+                                )}
+                                {user.inviteStatus === "ACCEPTED" && user.activatedAt && (
+                                  <span
+                                    className="text-[10px] font-semibold uppercase tracking-wide text-green-700 bg-green-100 px-1.5 py-0.5 rounded"
+                                    title={`Activated ${formatDate(user.activatedAt)}`}
+                                  >
+                                    Activated {formatDate(user.activatedAt)}
                                   </span>
                                 )}
                               </div>
@@ -208,6 +222,12 @@ export default async function PeoplePage() {
                               </svg>
                             </Link>
                             {user.inviteStatus === "PENDING" && user.inviteToken && (
+                              <>
+                                <SendIndividualInviteButton userId={user.id} userName={user.name} />
+                                <CancelInviteButton userId={user.id} userName={user.name} />
+                              </>
+                            )}
+                            {user.inviteStatus === "CANCELLED" && (
                               <SendIndividualInviteButton userId={user.id} userName={user.name} />
                             )}
                             <EditUserButton

@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/toast";
-import { Plus, Pencil, Trash2, Briefcase, Mail, Copy, Check, Send } from "lucide-react";
+import { Plus, Pencil, Trash2, Briefcase, Mail, Copy, Check, Send, Ban } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -883,6 +883,73 @@ export function SendIndividualInviteButton({
   );
 }
 
+// ─── CancelInviteButton ────────────────────────────────────────────────────────
+//
+// Cancels a pending invite. Invites never expire on their own, so this is the
+// only way to invalidate an outstanding invite link. Confirms first, since it
+// disables the link the employee may be about to use.
+
+export function CancelInviteButton({
+  userId,
+  userName,
+}: {
+  userId: string;
+  userName: string;
+}) {
+  const router = useRouter();
+  const { toast } = useToast();
+  const [open, setOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+
+  async function handleCancel() {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/invites/cancel/${userId}`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to cancel invite");
+      toast(`Invite for ${userName} cancelled`, "success");
+      setOpen(false);
+      router.refresh();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Something went wrong", "error");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          title={`Cancel invite for ${userName}`}
+          aria-label={`Cancel invite for ${userName}`}
+          className="h-8 w-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+        >
+          <Ban className="h-3.5 w-3.5" />
+        </button>
+      </DialogTrigger>
+      <DialogContent size="sm">
+        <DialogHeader>
+          <DialogTitle>Cancel Invite</DialogTitle>
+          <DialogDescription>
+            Cancel the invite for <strong>{userName}</strong>? Their invite link will stop working
+            immediately. You can re-send a fresh invite later if you change your mind.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button type="button" variant="outline">Keep Invite</Button>
+          </DialogClose>
+          <Button variant="destructive" onClick={handleCancel} loading={loading}>
+            Cancel Invite
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── SendInvitesButton ─────────────────────────────────────────────────────────
 //
 // Lists pending-invite employees and lets the admin either copy each invite
@@ -895,7 +962,7 @@ interface PendingInvite {
   name: string;
   email: string;
   inviteUrl: string;
-  inviteExpires: string | null;
+  invitedAt: string | null;
 }
 
 export function SendInvitesButton({ pendingCount }: { pendingCount: number }) {
@@ -932,6 +999,19 @@ export function SendInvitesButton({ pendingCount }: { pendingCount: number }) {
       setTimeout(() => setCopiedId((c) => (c === invite.id ? null : c)), 1500);
     } catch {
       toast("Could not copy to clipboard", "error");
+    }
+  }
+
+  async function cancelInvite(invite: PendingInvite) {
+    try {
+      const res = await fetch(`/api/invites/cancel/${invite.id}`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Failed to cancel invite");
+      toast(`Invite for ${invite.name} cancelled`, "success");
+      setInvites((prev) => prev.filter((i) => i.id !== invite.id));
+      router.refresh();
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Something went wrong", "error");
     }
   }
 
@@ -1006,6 +1086,15 @@ export function SendInvitesButton({ pendingCount }: { pendingCount: number }) {
                       Copy Link
                     </>
                   )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cancelInvite(inv)}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-gray-200 text-gray-600 hover:border-red-200 hover:text-red-600 transition-colors flex-shrink-0"
+                  title="Cancel invite"
+                >
+                  <Ban className="h-3 w-3" />
+                  Cancel
                 </button>
               </div>
             ))}

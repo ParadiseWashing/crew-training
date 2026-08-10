@@ -5,9 +5,6 @@ import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { notifyNewHireAssigned } from "@/lib/onboarding-notifications";
 
-const INVITE_EXPIRY_DAYS = 14;
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
 export async function GET() {
   const session = await auth();
   if (!session || session.user.systemRole !== "ADMIN") {
@@ -67,7 +64,7 @@ export async function POST(req: NextRequest) {
     let passwordHash: string | null = null;
     let inviteToken: string | null = null;
     let inviteStatus: "PENDING" | "ACCEPTED" = "ACCEPTED";
-    let inviteExpires: Date | null = null;
+    let invitedAt: Date | null = null;
 
     if (password) {
       if (password.length < 8) {
@@ -75,9 +72,10 @@ export async function POST(req: NextRequest) {
       }
       passwordHash = await bcrypt.hash(password, 12);
     } else {
+      // Invite never expires by time — it stays valid until the admin cancels it.
       inviteToken = randomBytes(32).toString("hex");
       inviteStatus = "PENDING";
-      inviteExpires = new Date(Date.now() + INVITE_EXPIRY_DAYS * MS_PER_DAY);
+      invitedAt = new Date();
     }
 
     // Use the first selected role as the "primary" for backwards compat with
@@ -91,7 +89,7 @@ export async function POST(req: NextRequest) {
         passwordHash,
         inviteToken,
         inviteStatus,
-        inviteExpires,
+        invitedAt,
         systemRole: systemRole || "TRAINEE",
         jobRoleId: primaryJobRoleId,
         jobRoles: {
