@@ -20,10 +20,12 @@ import {
   Clock,
   ScrollText,
   Play,
+  Pause,
   Menu,
   FileText as FileTextIcon,
   X,
   Maximize2,
+  Minimize2,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -295,6 +297,7 @@ declare global {
         seekTo: (seconds: number, allowSeekAhead: boolean) => void;
         setPlaybackRate: (rate: number) => void;
         playVideo: () => void;
+        pauseVideo: () => void;
       };
       PlayerState: { ENDED: number };
     };
@@ -348,6 +351,11 @@ function YouTubePlayer({ src, idx }: { src: string; idx: number }) {
   const pollRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const isCompleted = completedUrls.has(src);
   const [hasStarted, setHasStarted] = React.useState(false);
+  const [isPlaying, setIsPlaying] = React.useState(false);
+  const [controlsVisible, setControlsVisible] = React.useState(true);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const containerRef = React.useRef<HTMLDivElement | null>(null);
+  const hideTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
     if (!videoId) return;
@@ -373,7 +381,9 @@ function YouTubePlayer({ src, idx }: { src: string; idx: number }) {
             }, 500);
           },
           onStateChange: (event) => {
-            // 0 = ENDED
+            // YT states: 1 = playing, 2 = paused, 0 = ended
+            if (event.data === 1) setIsPlaying(true);
+            else if (event.data === 2 || event.data === 0) setIsPlaying(false);
             if (event.data === 0) {
               onVideoComplete(src);
             }
@@ -406,9 +416,21 @@ function YouTubePlayer({ src, idx }: { src: string; idx: number }) {
 
   // controls=0 removes YouTube's native control bar entirely (including the
   // seek bar), so trainees can't click or drag the timeline to skip ahead. A
-  // custom overlay handles starting playback; once started, an invisible
-  // click-blocker covers the iframe so they can't pause or otherwise interact.
+  // custom overlay handles starting playback; once started, our own overlay
+  // exposes play/pause and fullscreen only — deliberately no seek control, so
+  // completion still requires actually watching through to the end.
   const embedUrl = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&disablekb=1&rel=0&controls=0&modestbranding=1&fs=0`;
+
+  // Keep the fullscreen icon in sync, and clean up the auto-hide timer.
+  React.useEffect(() => {
+    const onFsChange = () =>
+      setIsFullscreen(document.fullscreenElement === containerRef.current);
+    document.addEventListener("fullscreenchange", onFsChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", onFsChange);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, []);
 
   const handleStart = () => {
     if (!playerRef.current) return;
@@ -420,20 +442,54 @@ function YouTubePlayer({ src, idx }: { src: string; idx: number }) {
     }
   };
 
+  const togglePlay = () => {
+    const p = playerRef.current;
+    if (!p) return;
+    try {
+      if (isPlaying) p.pauseVideo();
+      else p.playVideo();
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const toggleFullscreen = () => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else el.requestFullscreen?.();
+  };
+
+  // Reveal controls on mouse movement; auto-hide after a short idle.
+  const revealControls = () => {
+    setControlsVisible(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => setControlsVisible(false), 2500);
+  };
+
   return (
     <div className="my-4 relative">
       {isCompleted && (
-        <div className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-emerald-500 text-white text-xs px-2 py-1 rounded-full pointer-events-none">
+        <div className="absolute top-2 right-2 z-20 flex items-center gap-1 bg-emerald-500 text-white text-xs px-2 py-1 rounded-full pointer-events-none">
           <CheckCircle2 className="h-3 w-3" />
           Watched
         </div>
       )}
-      <div className="relative aspect-video rounded-lg overflow-hidden bg-black">
+      <div
+        ref={containerRef}
+        className={cn(
+          "relative overflow-hidden bg-black",
+          isFullscreen ? "w-full h-full" : "aspect-video rounded-lg"
+        )}
+        onMouseMove={hasStarted ? revealControls : undefined}
+        onMouseLeave={() => setControlsVisible(false)}
+      >
         <iframe
           id={playerId}
           src={embedUrl}
           className="absolute inset-0 w-full h-full"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
           title="YouTube video"
         />
         {!hasStarted && (
@@ -447,6 +503,39 @@ function YouTubePlayer({ src, idx }: { src: string; idx: number }) {
               <Play className="h-7 w-7 text-black fill-black ml-1" />
             </span>
           </button>
+        )}
+        {hasStarted && (
+          <div
+            className={cn(
+              "absolute bottom-0 inset-x-0 flex items-center justify-between gap-2 px-3 py-2 bg-gradient-to-t from-black/70 to-transparent transition-opacity duration-200",
+              controlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
+            )}
+          >
+            <button
+              type="button"
+              onClick={togglePlay}
+              className="flex items-center justify-center h-9 w-9 rounded-full bg-white/90 hover:bg-white text-black shadow"
+              aria-label={isPlaying ? "Pause" : "Play"}
+            >
+              {isPlaying ? (
+                <Pause className="h-4 w-4 fill-black" />
+              ) : (
+                <Play className="h-4 w-4 fill-black ml-0.5" />
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={toggleFullscreen}
+              className="flex items-center justify-center h-9 w-9 rounded-full bg-white/90 hover:bg-white text-black shadow"
+              aria-label={isFullscreen ? "Exit full screen" : "Full screen"}
+            >
+              {isFullscreen ? (
+                <Minimize2 className="h-4 w-4" />
+              ) : (
+                <Maximize2 className="h-4 w-4" />
+              )}
+            </button>
+          </div>
         )}
       </div>
       {!isCompleted && (
