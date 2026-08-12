@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { GraduationCap, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -135,6 +136,15 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+            </div>
+
+            <div className="flex justify-end -mt-1">
+              <Link
+                href="/forgot-password"
+                className="text-xs font-medium text-accent hover:underline"
+              >
+                Forgot password?
+              </Link>
             </div>
 
             {error && (

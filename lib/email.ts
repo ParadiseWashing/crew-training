@@ -7,8 +7,10 @@ import nodemailer, { type Transporter } from "nodemailer";
 import {
   buildInviteEmail,
   buildNewHireNotificationEmail,
+  buildPasswordResetEmail,
   type InviteEmailData,
   type NewHireNotificationData,
+  type PasswordResetEmailData,
 } from "./email-templates";
 
 const EMAIL_ENABLED = process.env.EMAIL_ENABLED === "true";
@@ -72,6 +74,11 @@ async function sendEmail(input: SendEmailInput): Promise<{ sent: boolean; reason
 
 export async function sendInviteEmail(data: InviteEmailData) {
   const { subject, html, text } = buildInviteEmail(data);
+  return sendEmail({ to: data.recipientEmail, subject, html, text });
+}
+
+export async function sendPasswordResetEmail(data: PasswordResetEmailData) {
+  const { subject, html, text } = buildPasswordResetEmail(data);
   return sendEmail({ to: data.recipientEmail, subject, html, text });
 }
 

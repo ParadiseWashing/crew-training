@@ -56,6 +56,8 @@ model User {
   inviteStatus  InviteStatus   @default(ACCEPTED)
   invitedAt     DateTime?
   activatedAt   DateTime?
+  passwordResetTokenHash String?    @unique
+  passwordResetExpiresAt DateTime?
   systemRole    SystemRole     @default(TRAINEE)
   jobRoleId     String?
   jobRole       JobRole?       @relation("UserPrimaryJobRole", fields: [jobRoleId], references: [id])

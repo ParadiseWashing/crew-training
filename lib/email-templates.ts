@@ -84,6 +84,90 @@ If you didn't expect this email, you can safely ignore it.
   return { subject, html, text };
 }
 
+// ─── Password Reset ───────────────────────────────────────────────────────────
+
+export interface PasswordResetEmailData {
+  recipientName: string;
+  recipientEmail: string;
+  resetUrl: string; // e.g. https://paradiseacademy.vercel.app/reset-password/abc123
+  expiresInMinutes: number;
+  companyName?: string;
+}
+
+export function buildPasswordResetEmail(data: PasswordResetEmailData): {
+  subject: string;
+  html: string;
+  text: string;
+} {
+  const company = data.companyName ?? "Paradise Washing";
+  const subject = `Reset your ${company} Academy password`;
+  const expiry = `${data.expiresInMinutes} minutes`;
+
+  const text = `Hi ${data.recipientName},
+
+We received a request to reset the password for your ${company} Academy account.
+
+Click the link below to choose a new password:
+${data.resetUrl}
+
+This link expires in ${expiry} and can only be used once.
+
+If you didn't request this, you can safely ignore this email — your password will not change.
+
+— ${company}`;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>${subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen,Ubuntu,sans-serif;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="560" style="max-width:560px;background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+          <tr>
+            <td style="padding:40px 40px 20px 40px;text-align:center;background-color:#0E0E0E;color:#ffffff;border-bottom:4px solid #F08A3E;">
+              <h1 style="margin:0;font-size:24px;font-weight:700;letter-spacing:-0.02em;">${company}</h1>
+              <p style="margin:8px 0 0 0;font-size:14px;color:#F08A3E;">Academy</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:32px 40px 24px 40px;">
+              <h2 style="margin:0 0 16px 0;font-size:20px;font-weight:600;color:#111827;">Reset your password</h2>
+              <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#374151;">
+                Hi ${data.recipientName}, we received a request to reset the password for your account. Click the button below to choose a new one.
+              </p>
+              <p style="margin:24px 0;text-align:center;">
+                <a href="${data.resetUrl}" style="display:inline-block;background-color:#F08A3E;color:#ffffff;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:15px;font-weight:600;">
+                  Reset Password
+                </a>
+              </p>
+              <p style="margin:0 0 8px 0;font-size:13px;color:#6b7280;">
+                Or copy and paste this link into your browser:
+              </p>
+              <p style="margin:0 0 24px 0;font-size:13px;color:#D9701F;word-break:break-all;">
+                ${data.resetUrl}
+              </p>
+              <p style="margin:24px 0 0 0;padding-top:20px;border-top:1px solid #e5e7eb;font-size:12px;color:#9ca3af;line-height:1.5;">
+                This link expires in ${expiry} and can only be used once. If you didn't request a password reset, you can safely ignore this email — your password will not change.
+              </p>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:16px 0 0 0;font-size:12px;color:#9ca3af;">
+          © ${new Date().getFullYear()} ${company}. All rights reserved.
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return { subject, html, text };
+}
+
 // ─── New Hire Notification (sent to Operational Managers) ──────────────────
 
 export interface NewHireNotificationData {

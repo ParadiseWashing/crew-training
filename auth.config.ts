@@ -26,9 +26,13 @@ export const authConfig = {
                   const isAdminPage = nextUrl.pathname.startsWith("/admin");
                   const isApiAuth = nextUrl.pathname.startsWith("/api/auth");
                   const isApiInvite = nextUrl.pathname.startsWith("/api/invite");
+                  const isPasswordResetPage =
+                            nextUrl.pathname.startsWith("/forgot-password") ||
+                            nextUrl.pathname.startsWith("/reset-password");
+                  const isApiPasswordReset = nextUrl.pathname.startsWith("/api/password-reset");
 
-            if (isApiAuth || isApiInvite) return true;
-                  if (isInvitePage) return true;
+            if (isApiAuth || isApiInvite || isApiPasswordReset) return true;
+                  if (isInvitePage || isPasswordResetPage) return true;
                   if (!isLoggedIn && !isAuthPage) return false;
                   if (isLoggedIn && isAuthPage) return Response.redirect(new URL("/trainee/home", nextUrl));
                   if (isAdminPage && auth?.user?.systemRole !== "ADMIN") {
