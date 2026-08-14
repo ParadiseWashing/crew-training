@@ -21,7 +21,8 @@ export function TabsTrigger({ className, ...props }: React.ComponentPropsWithout
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        "inline-flex items-center justify-center rounded-md px-4 py-1.5 text-sm font-medium transition-all",
+        // 44px touch target on phones; sm: restores the tighter desktop bar.
+        "inline-flex items-center justify-center rounded-md px-4 py-1.5 min-h-11 sm:min-h-0 text-sm font-medium transition-all",
         "text-gray-600 hover:text-gray-900",
         "data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm",
         "focus:outline-none focus:ring-2 focus:ring-accent",

@@ -11,13 +11,22 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, actions, className, breadcrumb }: PageHeaderProps) {
   return (
-    <div className={cn("flex items-start justify-between gap-4 mb-6", className)}>
+    // Actions stack under the title on phones. Side-by-side they squeeze the
+    // heading into an unreadable column, since the actions never shrink.
+    <div
+      className={cn(
+        "flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-6",
+        className
+      )}
+    >
       <div className="min-w-0">
         {breadcrumb && <div className="mb-1">{breadcrumb}</div>}
         <h1 className="text-2xl font-semibold text-[#0E0E0E] tracking-tight">{title}</h1>
         {description && <p className="text-sm text-[#6E665D] mt-1">{description}</p>}
       </div>
-      {actions && <div className="flex items-center gap-2 flex-shrink-0">{actions}</div>}
+      {actions && (
+        <div className="flex items-center gap-2 flex-wrap sm:flex-shrink-0">{actions}</div>
+      )}
     </div>
   );
 }

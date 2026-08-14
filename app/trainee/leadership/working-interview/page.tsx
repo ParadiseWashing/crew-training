@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/card";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 import { STATUS_LABELS } from "@/lib/working-interview";
-import { NewInterviewButton } from "./new-interview-client";
+import { NewInterviewButton } from "@/components/shared/new-interview-button";
 
 export const dynamic = "force-dynamic";
 

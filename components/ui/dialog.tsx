@@ -55,7 +55,7 @@ export function DialogContent({ className, children, size = "md", ...props }: Di
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-lg p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+        <DialogPrimitive.Close className="absolute right-2 top-2 sm:right-4 sm:top-4 inline-flex items-center justify-center h-11 w-11 sm:h-auto sm:w-auto rounded-lg p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
           <X className="h-4 w-4" />
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>

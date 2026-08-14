@@ -1,21 +1,18 @@
 // Shared definitions for the 3-Day Working Interview form.
 // Both API routes and UI import from here so field IDs stay in sync.
 
-export type RatingScale = "STRONG" | "ACCEPTABLE" | "NEEDS_WORK";
+// Services and general observations are a straight pass/fail call — there is no
+// middle option on purpose, so a crew lead has to commit to a judgement.
+export type PassFail = "PASS" | "FAIL";
 
-export const RATING_OPTIONS: { value: RatingScale; label: string; tone: "green" | "amber" | "red" }[] = [
-  { value: "STRONG", label: "Strong", tone: "green" },
-  { value: "ACCEPTABLE", label: "Acceptable", tone: "amber" },
-  { value: "NEEDS_WORK", label: "Needs Work", tone: "red" },
+export const PASS_FAIL_OPTIONS: { value: PassFail; label: string; tone: "green" | "red" }[] = [
+  { value: "PASS", label: "Pass", tone: "green" },
+  { value: "FAIL", label: "Fail", tone: "red" },
 ];
 
-export type RetentionScale = "NO" | "PARTIAL" | "YES";
-
-export const RETENTION_OPTIONS: { value: RetentionScale; label: string; tone: "green" | "amber" | "red" }[] = [
-  { value: "NO", label: "No re-teach", tone: "green" },
-  { value: "PARTIAL", label: "Partial re-teach", tone: "amber" },
-  { value: "YES", label: "Needed re-teach", tone: "red" },
-];
+export function isPassFail(v: unknown): v is PassFail {
+  return v === "PASS" || v === "FAIL";
+}
 
 // The 7 automatic disqualifiers from the SOP. Any flag = forced DQ.
 export const AUTO_DQ_FLAGS = [
@@ -43,17 +40,92 @@ export function hasRealDqFlag(codes: string[]): boolean {
   return codes.some((c) => c !== NONE_OF_ABOVE_CODE);
 }
 
-// Day 1 — Taught. Tasks taught & executed under direct supervision.
-export const DAY_1_TASKS = [
+/**
+ * The catalogue a crew lead picks from when recording what the candidate
+ * actually worked on that day. A day can cover more than one service, so the
+ * form lets them add as many rows as they need — each rated pass/fail.
+ */
+export const SERVICES = [
+  { id: "pressure_washing", label: "Pressure washing" },
+  { id: "windows", label: "Windows" },
+  { id: "tracks", label: "Window tracks" },
+  { id: "floors", label: "Floors" },
+  { id: "cabinets", label: "Cabinets" },
+  { id: "shelves", label: "Shelves" },
+  { id: "baseboards", label: "Baseboards" },
+  { id: "light_fixtures", label: "Light fixtures" },
+  { id: "paint_removal", label: "Paint removal" },
+  { id: "doors_frames", label: "Doors & frames" },
+  { id: "countertops", label: "Countertops" },
+  { id: "mirrors_glass", label: "Mirrors & glass" },
+  { id: "bathrooms", label: "Bathrooms & fixtures" },
+  { id: "appliances", label: "Appliances" },
+  { id: "dusting", label: "Dusting — high & low" },
+  { id: "vacuuming", label: "Vacuuming" },
+  { id: "sweep_mop", label: "Sweep & mop" },
+  { id: "debris_removal", label: "Trash & debris removal" },
+  { id: "final_detail", label: "Final detail / touch-up" },
+] as const;
+
+export type ServiceId = (typeof SERVICES)[number]["id"];
+
+export const SERVICE_IDS = new Set<string>(SERVICES.map((s) => s.id));
+
+export function serviceLabel(id: string): string {
+  return SERVICES.find((s) => s.id === id)?.label ?? id;
+}
+
+/**
+ * One row of the task-performance section. `label` is snapshotted at submit
+ * time so a historical report still reads correctly if the catalogue above is
+ * later renamed or trimmed.
+ */
+export interface ServiceRating {
+  id: string;
+  label: string;
+  rating: PassFail;
+}
+
+// ─── Legacy shape (pre-service-dropdown reports) ─────────────────────────────
+// Days submitted before the change stored `ratings.tasks` keyed by a fixed
+// 3-task list, rated on a 3-tier scale. Kept only so the admin views can still
+// render those records — never offered in the form.
+
+export const LEGACY_DAY_TASKS = [
   { id: "vacuum", label: "Vacuum cabinets & shelves" },
   { id: "wipedown", label: "Wipedown of cabinets & shelves" },
   { id: "paint_removal", label: "Paint removal" },
 ];
 
-// Day 2 — Tested. Same tasks, rated on retention (was a re-teach needed?).
-export const DAY_2_TASKS = DAY_1_TASKS;
+const LEGACY_VALUE_LABELS: Record<string, string> = {
+  STRONG: "Strong",
+  ACCEPTABLE: "Acceptable",
+  NEEDS_WORK: "Needs Work",
+  NO: "No re-teach",
+  PARTIAL: "Partial re-teach",
+  YES: "Needed re-teach",
+};
 
-// Shared 4-item observations rated all 3 days on the same scale.
+/**
+ * Renders any stored rating value — current PASS/FAIL or a legacy 3-tier value.
+ */
+export function displayRating(value: string | undefined | null): string {
+  if (!value) return "—";
+  if (value === "PASS") return "Pass";
+  if (value === "FAIL") return "Fail";
+  return LEGACY_VALUE_LABELS[value] ?? value;
+}
+
+/** Tone for a stored rating value, covering legacy values too. */
+export function ratingTone(value: string | undefined | null): "green" | "amber" | "red" | "gray" {
+  if (!value) return "gray";
+  if (value === "PASS" || value === "STRONG" || value === "NO") return "green";
+  if (value === "FAIL" || value === "NEEDS_WORK" || value === "YES") return "red";
+  if (value === "ACCEPTABLE" || value === "PARTIAL") return "amber";
+  return "gray";
+}
+
+// Shared 4-item observations rated all 3 days, pass/fail.
 export const OBSERVATIONS = [
   { id: "punctuality", label: "Punctuality / arrival" },
   { id: "coaching", label: "Receptive to coaching" },

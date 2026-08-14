@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { PageHeader, Breadcrumb } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
-import { ClipboardCheck, ChevronRight, ArrowRight } from "lucide-react";
+import { ClipboardCheck, ChevronRight } from "lucide-react";
 import { STATUS_LABELS } from "@/lib/working-interview";
 import { DeleteInterviewButton } from "./[interviewId]/delete-interview-client";
+import { NewInterviewButton } from "@/components/shared/new-interview-button";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,7 @@ export default async function AdminWorkingInterviewsPage() {
         }
         title="Working Interviews"
         description="3-day working interview reports submitted by crew leads."
+        actions={<NewInterviewButton label="New Working Interview" />}
       />
 
       {interviews.length === 0 ? (
@@ -60,9 +62,10 @@ export default async function AdminWorkingInterviewsPage() {
                 <ClipboardCheck className="h-6 w-6 text-gray-400" />
               </div>
               <p className="text-sm font-medium text-gray-900 mb-1">No working interviews yet</p>
-              <p className="text-sm text-gray-500">
-                Once crew leads start interviews from the Leadership section, candidates appear here.
+              <p className="text-sm text-gray-500 mb-4">
+                Start one here, or wait for a crew lead to start one from the Leadership section.
               </p>
+              <NewInterviewButton label="Start a Working Interview" />
             </div>
           </CardContent>
         </Card>

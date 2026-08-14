@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, BookOpen, Users, BarChart3, Settings,
   GraduationCap, TrendingUp, Building2, Menu, X, LogOut, ChevronRight, AlertTriangle,
-  ShieldCheck, ClipboardCheck,
+  ShieldCheck, ClipboardCheck, Activity, PenLine, CalendarCheck, UserSearch,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
@@ -19,9 +19,25 @@ interface NavItem {
 
 const adminNav: NavItem[] = [
   { label: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
+  { label: "Activity", href: "/admin/activity", icon: <Activity className="h-5 w-5" /> },
   { label: "Content", href: "/admin/content", icon: <BookOpen className="h-5 w-5" /> },
   { label: "People", href: "/admin/people", icon: <Users className="h-5 w-5" /> },
   { label: "Reports", href: "/admin/reports", icon: <BarChart3 className="h-5 w-5" /> },
+  {
+    label: "Written Responses",
+    href: "/admin/reports/written-responses",
+    icon: <PenLine className="h-5 w-5" />,
+  },
+  {
+    label: "Weekly Sign-Offs",
+    href: "/admin/reports/weekly-signoffs",
+    icon: <CalendarCheck className="h-5 w-5" />,
+  },
+  {
+    label: "Working Interviews",
+    href: "/admin/reports/working-interviews",
+    icon: <UserSearch className="h-5 w-5" />,
+  },
   { label: "Audit Flags", href: "/admin/reports/flags", icon: <AlertTriangle className="h-5 w-5" /> },
   { label: "Settings", href: "/admin/settings", icon: <Settings className="h-5 w-5" /> },
 ];
@@ -69,6 +85,15 @@ export function Sidebar({
         ...(canSignOffTraining ? [signOffsNavItem] : []),
       ];
 
+  // Several admin routes are nested under /admin/reports, so a plain prefix test
+  // would light up two entries at once. Only the longest match wins.
+  const activeHref = React.useMemo(() => {
+    const matches = navItems
+      .map((i) => i.href)
+      .filter((href) => pathname === href || pathname.startsWith(href + "/"));
+    return matches.sort((a, b) => b.length - a.length)[0];
+  }, [navItems, pathname]);
+
   const SidebarContent = () => (
     <div className="flex flex-col h-full bg-[#FFFFFF]">
       {/* Brand: Paradise wordmark */}
@@ -94,7 +119,7 @@ export function Sidebar({
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+          const isActive = item.href === activeHref;
           return (
             <Link
               key={item.href}

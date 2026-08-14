@@ -1,20 +1,24 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
+import { PenSquare } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PageHeader, Breadcrumb } from "@/components/shared/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   AUTO_DQ_FLAGS,
-  DAY_1_TASKS,
+  LEGACY_DAY_TASKS,
   OBSERVATIONS,
-  RATING_OPTIONS,
-  RETENTION_OPTIONS,
   PRODUCTION_SPEED_OPTIONS,
   QUALITY_AT_SPEED_OPTIONS,
   STATUS_LABELS,
   NONE_OF_ABOVE_CODE,
+  displayRating,
+  ratingTone,
+  type ServiceRating,
 } from "@/lib/working-interview";
 import { DeleteInterviewButton } from "./delete-interview-client";
+import { DeleteDayButton } from "./delete-day-client";
 
 export const dynamic = "force-dynamic";
 
@@ -30,16 +34,12 @@ const DAY_TITLES: Record<number, string> = {
   3: "Day 3 — Produced",
 };
 
-function ratingLabel(value: string | undefined, day: number): string {
-  if (!value) return "—";
-  const pool = day === 2 ? RETENTION_OPTIONS : RATING_OPTIONS;
-  return pool.find((o) => o.value === value)?.label ?? value;
-}
-
-function obsLabel(value: string | undefined): string {
-  if (!value) return "—";
-  return RATING_OPTIONS.find((o) => o.value === value)?.label ?? value;
-}
+const RATING_TONE_CLASSES: Record<string, string> = {
+  green: "text-emerald-700",
+  amber: "text-amber-700",
+  red: "text-red-700",
+  gray: "text-gray-400",
+};
 
 function speedLabel(value: string | undefined): string {
   if (!value) return "—";
@@ -97,11 +97,24 @@ export default async function AdminInterviewDetailPage({
         title={interview.candidateName}
         description={`Started ${new Date(interview.startedAt).toLocaleDateString()} by ${interview.startedBy.name}`}
         actions={
-          <DeleteInterviewButton
-            interviewId={interview.id}
-            candidateName={interview.candidateName}
-            dayCount={interview.days.length}
-          />
+          <>
+            {/* The day form lives in the leadership section — admins pass the
+                same permission check, so link straight into it. */}
+            {interview.status === "IN_PROGRESS" && (
+              <Link
+                href={`/trainee/leadership/working-interview/${interview.id}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[#E8E4DE] bg-white px-3 py-2 text-sm font-medium text-[#34302C] hover:bg-[#F7F5F2] transition-colors"
+              >
+                <PenSquare className="h-4 w-4" />
+                Fill out day report
+              </Link>
+            )}
+            <DeleteInterviewButton
+              interviewId={interview.id}
+              candidateName={interview.candidateName}
+              dayCount={interview.days.length}
+            />
+          </>
         }
       />
       <div className="mb-6 -mt-2">
@@ -115,18 +128,32 @@ export default async function AdminInterviewDetailPage({
       {interview.days.length === 0 && (
         <Card>
           <CardContent>
-            <p className="text-sm text-gray-500 py-6 text-center">
-              No day reports have been submitted yet.
-            </p>
+            <div className="py-6 text-center">
+              <p className="text-sm text-gray-500">No day reports have been submitted yet.</p>
+              <Link
+                href={`/trainee/leadership/working-interview/${interview.id}`}
+                className="text-sm font-medium text-accent hover:underline mt-1 inline-block"
+              >
+                Fill out the Day 1 report →
+              </Link>
+            </div>
           </CardContent>
         </Card>
       )}
 
       <div className="space-y-4">
-        {interview.days.map((d) => {
+        {interview.days.map((d, idx) => {
+          const isLastDay = idx === interview.days.length - 1;
           const ratings = (d.ratings as Record<string, unknown>) ?? {};
-          const tasks = (ratings.tasks as Record<string, string>) ?? {};
           const obs = (ratings.observations as Record<string, string>) ?? {};
+          // Current reports store a lead-selected `services` array. Reports
+          // submitted before that change stored a fixed `tasks` map instead —
+          // fall back to it so historical records still render.
+          const services: ServiceRating[] = Array.isArray(ratings.services)
+            ? (ratings.services as ServiceRating[])
+            : [];
+          const legacyTasks = (ratings.tasks as Record<string, string>) ?? {};
+          const hasLegacyTasks = services.length === 0 && Object.keys(legacyTasks).length > 0;
           const flagCodes: string[] = Array.isArray(d.autoDqFlags) ? (d.autoDqFlags as string[]) : [];
           // Don't surface NONE_OF_ABOVE in the "Auto-DQ Flags Triggered" warning —
           // it's the safe-answer code, not a triggered disqualifier.
@@ -148,9 +175,17 @@ export default async function AdminInterviewDetailPage({
                       Submitted {new Date(d.submittedAt).toLocaleString()} by {d.evaluator.name}
                     </p>
                   </div>
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${decisionTone}`}>
-                    {decisionLabel(d.decision)}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <DeleteDayButton
+                      interviewId={interview.id}
+                      candidateName={interview.candidateName}
+                      day={d.day}
+                      isLastDay={isLastDay}
+                    />
+                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${decisionTone}`}>
+                      {decisionLabel(d.decision)}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Auto-DQ flags (if any) */}
@@ -169,21 +204,35 @@ export default async function AdminInterviewDetailPage({
                   </div>
                 )}
 
-                {/* Task ratings (Day 1 + 2) */}
-                {(d.day === 1 || d.day === 2) && (
+                {/* Services worked (Day 1 + 2) */}
+                {(d.day === 1 || d.day === 2) && (services.length > 0 || hasLegacyTasks) && (
                   <div>
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1.5">
-                      {d.day === 2 ? "Task Retention" : "Task Performance"}
+                      {d.day === 2 ? "Service Retention" : "Service Performance"}
+                      {hasLegacyTasks && (
+                        <span className="ml-2 normal-case tracking-normal font-normal text-gray-400">
+                          (legacy fixed task list)
+                        </span>
+                      )}
                     </p>
                     <div className="grid sm:grid-cols-3 gap-2">
-                      {DAY_1_TASKS.map((task) => (
+                      {(hasLegacyTasks
+                        ? LEGACY_DAY_TASKS.map((t) => ({
+                            id: t.id,
+                            label: t.label,
+                            rating: legacyTasks[t.id],
+                          }))
+                        : services
+                      ).map((row) => (
                         <div
-                          key={task.id}
+                          key={row.id}
                           className="rounded-md border border-gray-200 px-3 py-2 bg-gray-50"
                         >
-                          <p className="text-[11px] text-gray-500">{task.label}</p>
-                          <p className="text-sm font-semibold text-gray-900 mt-0.5">
-                            {ratingLabel(tasks[task.id], d.day)}
+                          <p className="text-[11px] text-gray-500">{row.label}</p>
+                          <p
+                            className={`text-sm font-semibold mt-0.5 ${RATING_TONE_CLASSES[ratingTone(row.rating)]}`}
+                          >
+                            {displayRating(row.rating)}
                           </p>
                         </div>
                       ))}
@@ -198,7 +247,7 @@ export default async function AdminInterviewDetailPage({
                       Pace at Speed
                     </p>
                     <p className="text-sm font-semibold text-gray-900">
-                      {obsLabel(ratings.paceAtSpeed as string)}
+                      {displayRating(ratings.paceAtSpeed as string)}
                     </p>
                   </div>
                 )}
@@ -243,8 +292,10 @@ export default async function AdminInterviewDetailPage({
                         className="rounded-md border border-gray-200 px-3 py-2 bg-gray-50 flex items-center justify-between gap-2"
                       >
                         <p className="text-[11px] text-gray-500">{o.label}</p>
-                        <p className="text-xs font-semibold text-gray-900">
-                          {obsLabel(obs[o.id])}
+                        <p
+                          className={`text-xs font-semibold ${RATING_TONE_CLASSES[ratingTone(obs[o.id])]}`}
+                        >
+                          {displayRating(obs[o.id])}
                         </p>
                       </div>
                     ))}

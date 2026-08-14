@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { gradeAnswers } from "@/lib/quiz-grading";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ quizId: string }> }) {
   const session = await auth();
@@ -43,27 +44,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ qui
     return NextResponse.json({ error: "Max attempts reached" }, { status: 400 });
   }
 
-  // Grade the quiz
-  let correct = 0;
-  let gradeable = 0;
-
-  for (const question of quiz.questions) {
-    if (question.type === "WRITTEN_RESPONSE") continue;
-    gradeable++;
-
-    const userAnswer = answers[question.id];
-    const correctAnswer = question.correctAnswer;
-
-    if (question.type === "MULTIPLE_CHOICE" || question.type === "TRUE_FALSE") {
-      if (userAnswer === correctAnswer) correct++;
-    } else if (question.type === "MULTIPLE_SELECT") {
-      const ua = Array.isArray(userAnswer) ? [...userAnswer].sort() : [];
-      const ca = Array.isArray(correctAnswer) ? [...(correctAnswer as string[])].sort() : [];
-      if (JSON.stringify(ua) === JSON.stringify(ca)) correct++;
-    }
-  }
-
-  const score = gradeable > 0 ? Math.round((correct / gradeable) * 100) : 0;
+  // Grade the quiz. Written responses are excluded here — they only affect the
+  // score once an admin grades them from /admin/reports/written-responses.
+  const { correct, gradeable, score, ungradedWritten } = gradeAnswers(
+    quiz.questions,
+    answers,
+    null
+  );
   const passed = score >= quiz.passingScore;
   const attemptNum = existingAttempts.length + 1;
 
@@ -209,9 +196,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ qui
       ...attempt,
       correctCount: correct,
       totalGradeable: gradeable,
+      pendingWrittenReview: ungradedWritten,
       moduleReset: true,
     });
   }
 
-  return NextResponse.json({ ...attempt, correctCount: correct, totalGradeable: gradeable });
+  return NextResponse.json({
+    ...attempt,
+    correctCount: correct,
+    totalGradeable: gradeable,
+    pendingWrittenReview: ungradedWritten,
+  });
 }

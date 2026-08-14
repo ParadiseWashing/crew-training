@@ -256,6 +256,27 @@ model QuizAttempt {
   attemptNum       Int
   timeTakenSeconds Int      @default(0)
   takenAt          DateTime @default(now())
+
+  // Manual grading of WRITTEN_RESPONSE questions.
+  // { [questionId]: { verdict: "CORRECT" | "INCORRECT", feedback?: string } }
+  writtenGrades Json?
+  gradedById    String?
+  gradedAt      DateTime?
+}
+
+// Append-only record of destructive / irreversible admin actions.
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actorName  String
+  action     String
+  entityType String
+  entityId   String
+  summary    String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 enum AuditFlagType {

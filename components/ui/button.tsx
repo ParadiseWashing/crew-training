@@ -21,11 +21,14 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       success: "bg-[#4FA66B] text-white hover:bg-[#3F8556] focus:ring-[#4FA66B]",
     };
 
+    // min-h-11 floors every button at a 44px touch target on phones (min-height
+    // beats the fixed h-*), then sm:min-h-0 hands control back to h-* so the
+    // desktop density is unchanged. lg is already 44px.
     const sizes = {
-      sm: "h-8 px-3 text-sm",
-      md: "h-10 px-4 text-sm",
+      sm: "h-8 min-h-11 sm:min-h-0 px-3 text-sm",
+      md: "h-10 min-h-11 sm:min-h-0 px-4 text-sm",
       lg: "h-11 px-6 text-base",
-      icon: "h-9 w-9 rounded-lg",
+      icon: "h-9 w-9 min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 rounded-lg",
     };
 
     return (

@@ -78,9 +78,11 @@ export function DeleteInterviewButton({
             onClick={handleTriggerClick}
             title={`Delete ${candidateName}'s working interview`}
             aria-label={`Delete ${candidateName}'s working interview`}
-            className="h-8 w-8 inline-flex items-center justify-center rounded-md text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
+            // Destructive, and it sits beside a full-width navigation link — needs
+            // a real 44px target on phones so it can't be caught by a stray thumb.
+            className="h-11 w-11 sm:h-8 sm:w-8 inline-flex items-center justify-center rounded-md text-gray-300 hover:text-red-600 hover:bg-red-50 transition-colors flex-shrink-0"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
           </button>
         ) : (
           <Button size="sm" variant="outline" className="text-red-600 border-red-200 hover:bg-red-50">

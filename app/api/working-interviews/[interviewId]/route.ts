@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logAdminAction } from "@/lib/admin-audit";
 
 async function requireLeadershipAccess() {
   const session = await auth();
@@ -46,6 +47,41 @@ export async function DELETE(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const { interviewId } = await params;
+
+  const interview = await prisma.workingInterview.findUnique({
+    where: { id: interviewId },
+    include: {
+      startedBy: { select: { id: true, name: true } },
+      days: { orderBy: { day: "asc" } },
+    },
+  });
+  if (!interview) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   await prisma.workingInterview.delete({ where: { id: interviewId } });
+
+  await logAdminAction({
+    actorId: session.user.id,
+    actorName: session.user.name ?? "Admin",
+    action: "DELETE_WORKING_INTERVIEW",
+    entityType: "WorkingInterview",
+    entityId: interviewId,
+    summary: `Deleted the working interview for ${interview.candidateName} (${interview.status}, ${interview.days.length} day report${interview.days.length === 1 ? "" : "s"})`,
+    metadata: {
+      candidateName: interview.candidateName,
+      status: interview.status,
+      startedBy: interview.startedBy.name,
+      startedAt: interview.startedAt.toISOString(),
+      days: interview.days.map((d) => ({
+        day: d.day,
+        decision: d.decision,
+        evaluatorId: d.evaluatorId,
+        ratings: d.ratings,
+        autoDqFlags: d.autoDqFlags,
+        notes: d.notes,
+        submittedAt: d.submittedAt.toISOString(),
+      })),
+    },
+  });
+
   return NextResponse.json({ success: true });
 }

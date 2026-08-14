@@ -12,25 +12,28 @@ import {
   Lock,
   AlertTriangle,
   ChevronRight,
+  Plus,
+  X,
 } from "lucide-react";
 import {
   AUTO_DQ_FLAGS,
-  DAY_1_TASKS,
-  DAY_2_TASKS,
+  SERVICES,
   OBSERVATIONS,
-  RATING_OPTIONS,
-  RETENTION_OPTIONS,
+  PASS_FAIL_OPTIONS,
   PRODUCTION_SPEED_OPTIONS,
   QUALITY_AT_SPEED_OPTIONS,
   NONE_OF_ABOVE_CODE,
   hasRealDqFlag,
   decisionOptionsForDay,
   forcedDecisionForDay,
-  type RatingScale,
-  type RetentionScale,
+  type PassFail,
+  type ServiceRating,
 } from "@/lib/working-interview";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+/** A service row while the form is being filled in — rating not yet chosen. */
+type DraftServiceRating = Omit<ServiceRating, "rating"> & { rating: PassFail | "" };
 
 interface DayReport {
   id: string;
@@ -60,8 +63,8 @@ const DAY_TITLES: Record<number, string> = {
 };
 
 const DAY_SUBTITLES: Record<number, string> = {
-  1: "Teach the 3 tasks in order. Candidate executes under direct supervision; you correct in real time.",
-  2: "Same tasks. No re-teaching. Test retention, pace, and quality at speed.",
+  1: "Teach each service you put them on. Candidate executes under direct supervision; you correct in real time.",
+  2: "Same services as day 1 where you can. No re-teaching — test retention, pace, and quality at speed.",
   3: "Real production. Candidate held to near-full crew speed. Owner stops by 30-60 min.",
 };
 
@@ -240,14 +243,16 @@ function DayForm({
 
   // State per field
   const [autoDqFlags, setAutoDqFlags] = React.useState<string[]>([]);
-  const [taskRatings, setTaskRatings] = React.useState<Record<string, RatingScale | RetentionScale | "">>({});
-  const [observations, setObservations] = React.useState<Record<string, RatingScale | "">>({});
+  // Services worked that day, in the order the lead added them. `rating` starts
+  // empty and must be filled before the day can be submitted.
+  const [services, setServices] = React.useState<DraftServiceRating[]>([]);
+  const [observations, setObservations] = React.useState<Record<string, PassFail | "">>({});
   // Day 3-only
   const [ownerVisitConfirmed, setOwnerVisitConfirmed] = React.useState<boolean | null>(null);
   const [productionSpeed, setProductionSpeed] = React.useState<string>("");
   const [qualityAtSpeed, setQualityAtSpeed] = React.useState<string>("");
   // Day 2-only
-  const [paceAtSpeed, setPaceAtSpeed] = React.useState<RatingScale | "">("");
+  const [paceAtSpeed, setPaceAtSpeed] = React.useState<PassFail | "">("");
   // Shared
   const [notes, setNotes] = React.useState("");
   const [decision, setDecision] = React.useState<"CONTINUE" | "DQ" | "HIRE" | "DO_NOT_HIRE" | "">("");
@@ -282,9 +287,13 @@ function DayForm({
     }
   }
 
-  const tasks = day === 1 ? DAY_1_TASKS : day === 2 ? DAY_2_TASKS : [];
-  const taskScale = day === 2 ? RETENTION_OPTIONS : RATING_OPTIONS;
-  const taskScaleLabel = day === 2 ? "Re-teach needed?" : "Performance";
+  // Day 3 is a production day — no service-by-service rating, it's judged on
+  // speed and whether quality held up.
+  const tracksServices = day === 1 || day === 2;
+
+  // Only offer services that haven't been added yet, so a day can't list the
+  // same service twice.
+  const availableServices = SERVICES.filter((s) => !services.some((sel) => sel.id === s.id));
 
   /** Returns a list of human-readable missing field names. Empty = ready to submit. */
   function missingFields(): string[] {
@@ -294,11 +303,12 @@ function DayForm({
       missing.push("Automatic disqualifiers (pick at least one, or \"None of the above\")");
     }
 
-    if (day === 1 || day === 2) {
-      for (const task of DAY_1_TASKS) {
-        if (!taskRatings[task.id]) {
-          missing.push(`Task — ${task.label}`);
-        }
+    if (tracksServices) {
+      if (services.length === 0) {
+        missing.push("Services worked (add at least one)");
+      }
+      for (const s of services) {
+        if (!s.rating) missing.push(`Service — ${s.label}`);
       }
     }
 
@@ -339,7 +349,7 @@ function DayForm({
     }
 
     const ratings: Record<string, unknown> = {
-      tasks: taskRatings,
+      services: tracksServices ? services : [],
       observations,
     };
     if (day === 2) ratings.paceAtSpeed = paceAtSpeed;
@@ -394,7 +404,7 @@ function DayForm({
               <label
                 key={flag.code}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-colors",
+                  "flex items-center gap-3 px-3 py-2 min-h-11 rounded-lg border cursor-pointer transition-colors",
                   checked
                     ? "border-red-300 bg-red-50"
                     : "border-gray-200 hover:bg-gray-50"
@@ -419,7 +429,7 @@ function DayForm({
             return (
               <label
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer transition-colors mt-2",
+                  "flex items-center gap-3 px-3 py-2 min-h-11 rounded-lg border cursor-pointer transition-colors mt-2",
                   noneChecked
                     ? "border-emerald-300 bg-emerald-50"
                     : "border-gray-200 hover:bg-gray-50"
@@ -445,21 +455,81 @@ function DayForm({
         </div>
       </FormSection>
 
-      {/* Day 1 & 2: Task ratings */}
-      {tasks.length > 0 && (
-        <FormSection title={day === 2 ? "Task retention" : "Task performance"} subtitle={taskScaleLabel}>
+      {/* Day 1 & 2: Services worked, chosen by the lead */}
+      {tracksServices && (
+        <FormSection
+          title={day === 2 ? "Service retention" : "Service performance"}
+          subtitle={
+            day === 2
+              ? "Add each service they worked today and mark whether they held it without a re-teach."
+              : "Add each service they worked today and mark it pass or fail."
+          }
+        >
           <div className="space-y-3">
-            {tasks.map((task) => (
-              <RatingRow
-                key={task.id}
-                label={task.label}
-                options={taskScale}
-                value={(taskRatings[task.id] as string) || ""}
-                onChange={(v) =>
-                  setTaskRatings((prev) => ({ ...prev, [task.id]: v as RatingScale | RetentionScale }))
-                }
-              />
-            ))}
+            <ServicePicker
+              available={availableServices}
+              onAdd={(svc) =>
+                setServices((prev) => [...prev, { id: svc.id, label: svc.label, rating: "" }])
+              }
+            />
+
+            {services.length === 0 ? (
+              <p className="text-xs text-gray-400 border border-dashed border-gray-200 rounded-lg px-3 py-4 text-center">
+                No services added yet — pick one above to start.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {services.map((svc) => (
+                  <div
+                    key={svc.id}
+                    className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-lg border border-gray-200 px-3 py-2"
+                  >
+                    <p className="text-sm text-gray-700 flex-1">{svc.label}</p>
+                    <div className="flex items-center gap-2">
+                      {PASS_FAIL_OPTIONS.map((opt) => {
+                        const selected = svc.rating === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() =>
+                              setServices((prev) =>
+                                prev.map((s) =>
+                                  s.id === svc.id ? { ...s, rating: opt.value } : s
+                                )
+                              )
+                            }
+                            className={cn(
+                              // Leads fill this out one-handed on a job site, so
+                              // phones get a full 44px target and the two options
+                              // split the row. Desktop keeps the compact chip.
+                              "flex-1 sm:flex-none inline-flex items-center justify-center min-h-11 sm:min-h-0 px-4 sm:px-3 sm:py-1.5 rounded-md border text-sm sm:text-xs font-medium transition-colors whitespace-nowrap",
+                              selected && opt.tone === "green"
+                                ? "border-emerald-400 bg-emerald-50 text-emerald-700"
+                                : selected
+                                  ? "border-red-400 bg-red-50 text-red-700"
+                                  : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                            )}
+                          >
+                            {opt.label}
+                          </button>
+                        );
+                      })}
+                      {/* Destructive, and it sits next to "Fail" — keep it a full
+                          touch target and set apart so it can't be mis-tapped. */}
+                      <button
+                        type="button"
+                        onClick={() => setServices((prev) => prev.filter((s) => s.id !== svc.id))}
+                        aria-label={`Remove ${svc.label}`}
+                        className="shrink-0 ml-1 inline-flex items-center justify-center min-h-11 min-w-11 sm:min-h-0 sm:min-w-0 sm:p-1.5 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </FormSection>
       )}
@@ -469,9 +539,9 @@ function DayForm({
         <FormSection title="Pace & quality at speed">
           <RatingRow
             label="How did they hold up at speed?"
-            options={RATING_OPTIONS}
+            options={PASS_FAIL_OPTIONS}
             value={paceAtSpeed}
-            onChange={(v) => setPaceAtSpeed(v as RatingScale)}
+            onChange={(v) => setPaceAtSpeed(v as PassFail)}
           />
         </FormSection>
       )}
@@ -523,16 +593,16 @@ function DayForm({
       )}
 
       {/* Shared: General observations */}
-      <FormSection title="General observations">
+      <FormSection title="General observations" subtitle="Pass or fail on each.">
         <div className="space-y-3">
           {OBSERVATIONS.map((obs) => (
             <RatingRow
               key={obs.id}
               label={obs.label}
-              options={RATING_OPTIONS}
+              options={PASS_FAIL_OPTIONS}
               value={(observations[obs.id] as string) || ""}
               onChange={(v) =>
-                setObservations((prev) => ({ ...prev, [obs.id]: v as RatingScale }))
+                setObservations((prev) => ({ ...prev, [obs.id]: v as PassFail }))
               }
             />
           ))}
@@ -569,7 +639,7 @@ function DayForm({
                 disabled={disabled}
                 onClick={() => setDecision(opt.value)}
                 className={cn(
-                  "px-4 py-2 rounded-lg border-2 text-sm font-semibold transition-colors",
+                  "inline-flex items-center justify-center min-h-11 px-4 py-2 rounded-lg border-2 text-sm font-semibold transition-colors",
                   selected && opt.tone === "green" && "border-emerald-500 bg-emerald-50 text-emerald-700",
                   selected && opt.tone === "red" && "border-red-500 bg-red-50 text-red-700",
                   !selected && !disabled && "border-gray-200 text-gray-600 hover:bg-gray-50",
@@ -615,6 +685,47 @@ function FormSection({
   );
 }
 
+/**
+ * Dropdown of services not yet on the report. Resets to the placeholder after
+ * each pick so the lead can add several in a row without extra clicks.
+ */
+function ServicePicker({
+  available,
+  onAdd,
+}: {
+  available: readonly { id: string; label: string }[];
+  onAdd: (svc: { id: string; label: string }) => void;
+}) {
+  if (available.length === 0) {
+    return (
+      <p className="text-xs text-gray-400">All services have been added to this day.</p>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2">
+      <div className="relative flex-1">
+        <Plus className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+        <select
+          value=""
+          onChange={(e) => {
+            const svc = available.find((s) => s.id === e.target.value);
+            if (svc) onAdd({ id: svc.id, label: svc.label });
+          }}
+          className="w-full appearance-none rounded-lg border border-gray-200 bg-white pl-9 pr-8 min-h-11 sm:min-h-0 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent"
+        >
+          <option value="">Add a service worked today…</option>
+          {available.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.label}
+            </option>
+          ))}
+        </select>
+        <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 rotate-90 pointer-events-none" />
+      </div>
+    </div>
+  );
+}
+
 function RatingRow({
   label,
   options,
@@ -629,7 +740,7 @@ function RatingRow({
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-2">
       <p className="text-sm text-gray-700 flex-1">{label}</p>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2 sm:gap-1.5">
         {options.map((opt) => {
           const selected = value === opt.value;
           const toneClasses = selected
@@ -645,7 +756,9 @@ function RatingRow({
               type="button"
               onClick={() => onChange(opt.value)}
               className={cn(
-                "px-3 py-1.5 rounded-md border text-xs font-medium transition-colors whitespace-nowrap",
+                // Matches the service rows: 44px targets on phones, compact chips
+                // from sm: up. flex-1 keeps a 2-option row evenly split.
+                "flex-1 sm:flex-none inline-flex items-center justify-center min-h-11 sm:min-h-0 px-4 sm:px-3 sm:py-1.5 rounded-md border text-sm sm:text-xs font-medium transition-colors whitespace-nowrap",
                 toneClasses
               )}
             >
